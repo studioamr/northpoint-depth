@@ -234,8 +234,9 @@
     if (label) { x.fillStyle = col; x.font = '9px ' + MONO; x.textAlign = right ? 'right' : 'left'; x.fillText(label, right ? w - 6 : 4, y - 6); }
     x.restore();
   }
-  function tag(x, cw, y, txt, bg, fg) {
-    x.fillStyle = bg; x.fillRect(cw, y - 8, 68, 16); x.fillStyle = fg || '#05070a'; x.font = '11px ' + MONO; x.textAlign = 'left'; x.fillText(txt, cw + 6, y + 0.5);
+  function tag(x, cw, y, txt, bg, fg) {   // etiqueta de precio redondeada sobre el eje
+    x.save(); x.fillStyle = bg; x.beginPath(); if (x.roundRect) x.roundRect(cw + 2, y - 9, 64, 18, 5); else x.rect(cw + 2, y - 9, 64, 18); x.fill();
+    x.fillStyle = fg || '#03101a'; x.font = '600 11px ' + MONO; x.textAlign = 'left'; x.textBaseline = 'middle'; x.fillText(txt, cw + 7, y + 0.5); x.restore();
   }
 
   /* ---------- serie completa: velas del exchange (historia) + barras tick a tick (con clusters) ---------- */
@@ -412,7 +413,8 @@
     for (let k = Math.ceil(kBot / stepK) * stepK; k <= kTop; k += stepK) { const y = num ? Y(k) - rh / 2 : Y(k); if (y > 6 && y < ch - 6) x.fillText(fp(k), cw + 6, y); }
     const yl = Y(eng.last + 0.5);
     if (yl > 0 && yl < ch) {
-      tag(x, cw, yl, fp(eng.last), eng.lastS ? C.dn : C.up);
+      x.save(); x.setLineDash([2, 4]); x.strokeStyle = eng.lastS ? dn(0.55) : up(0.55); x.beginPath(); x.moveTo(0, Math.round(yl) + 0.5); x.lineTo(cw, Math.round(yl) + 0.5); x.stroke(); x.restore();   // línea del último precio
+      tag(x, cw, yl, fp(eng.last), eng.lastS ? C.dn : C.up, eng.lastS ? '#fff' : '#03101a');
       if (isT && !rep) { const r = Math.max(0, last.t0 + size - (Date.now() - skew)), s = Math.floor(r / 1000); x.fillStyle = C.mut; x.font = '10px ' + MONO; x.fillText(s >= 3600 ? Math.floor(s / 3600) + ':' + p2(Math.floor(s / 60) % 60) + ':' + p2(s % 60) : p2(Math.floor(s / 60)) + ':' + p2(s % 60), cw + 6, yl + 15); }
     }
 
@@ -448,8 +450,9 @@
     let ri = nb - 1;
     if (mouse && mouse.v === 'fp' && mouse.x < cw) {
       x.fillStyle = 'rgba(255,255,255,.18)'; x.fillRect(mouse.x, 0, 1, H - TB);
-      if (mouse.y < ch) { x.fillRect(0, mouse.y, cw, 1); tag(x, cw, mouse.y, fp(Math.floor(v.cK + (ch / 2 - mouse.y) / rh * g)), '#1a2230', C.tx); }
+      if (mouse.y < ch) { x.fillRect(0, mouse.y, cw, 1); tag(x, cw, mouse.y, fp(Math.floor(v.cK + (ch / 2 - mouse.y) / rh * g)), '#1b2a48', C.tx); }
       const i = nb - Math.ceil((xR + v.offX - mouse.x) / v.barW); if (i >= 0 && i < nb) ri = i;
+      if (i >= 0 && i < nb) { const lb = bigTF ? fd(A[i].t0) : ft(A[i].t0, !isT || size < 60000); x.save(); x.font = '600 10.5px ' + MONO; const tw = x.measureText(lb).width + 14; x.fillStyle = '#1b2a48'; x.beginPath(); if (x.roundRect) x.roundRect(mouse.x - tw / 2, H - TB + 1, tw, TB - 2, 5); else x.rect(mouse.x - tw / 2, H - TB + 1, tw, TB - 2); x.fill(); x.fillStyle = C.tx; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(lb, mouse.x, H - TB / 2); x.restore(); }   // hora bajo la cruz
     }
     const rb = A[ri], d = rb.buy - rb.sell;
     $('read').innerHTML = `<b>${sym.id}</b> ${bigTF ? fd(rb.t0) : ft(rb.t0, 1)} &nbsp; A <b>${fp(rb.o)}</b> M <b>${fp(rb.h)}</b> m <b>${fp(rb.l)}</b> C <b>${fp(rb.c)}</b> &nbsp; Vol <b>${fv(rb.vol)}</b> &nbsp; Delta <b class="${d >= 0 ? 'u' : 'd'}">${fs(d)}</b>` +
@@ -736,13 +739,14 @@
   $('aud').onclick = () => toggle('audP', showAudit);
 
   /* ---------- panel de indicadores ---------- */
-  const INDS = [['GRÁFICO'], ['vwap', 'VWAP del día', 'anclado a las 00:00 UTC'], ['bands', 'Bandas del VWAP', '1 y 2 desviaciones'], ['ema1', 'Media exponencial A', '', 'e1'], ['ema2', 'Media exponencial B', '', 'e2'], ['day', 'Niveles de ayer', 'máximo, mínimo, cierre y apertura de hoy'], ['prof', 'Perfil de volumen', 'POC, VAH y VAL de los ticks cargados'],
-    ['ORDER FLOW'], ['imb', 'Desbalances', 'números resaltados'], ['zones', 'Zonas de desbalance apilado', 'se extienden hasta que el precio las cruza'], ['poc', 'POC de cada barra'], ['big', 'Trades grandes', 'órdenes agresoras de gran tamaño'], ['liq', 'Liquidaciones', 'posiciones cerradas a la fuerza por el exchange'], ['ice', 'Icebergs y muros retirados', 'órdenes ocultas que se recargan y muros que se quitan antes de tocarse'], ['cvds', 'CVD de órdenes grandes y chicas', 'en el panel de abajo'], ['sess', 'Perfil por sesión', 'Asia, Londres y Nueva York'], ['cal', 'Datos económicos en el gráfico', 'solo en la app de escritorio'], ['heat', 'Liquidez detrás de las velas', 'el libro en el tiempo, como fondo'], ['stats', 'Estadística de clusters', 'tabla por barra debajo del gráfico']];
+  const INDS = [['PRECIO'], ['vwap', 'VWAP diario', 'Precio promedio ponderado desde las 00:00 UTC.'], ['bands', 'Bandas de VWAP', 'Una y dos desviaciones estándar.'], ['ema1', 'Media móvil rápida', 'Exponencial; elige el periodo.', 'e1'], ['ema2', 'Media móvil lenta', 'Exponencial; elige el periodo.', 'e2'], ['day', 'Niveles del día anterior', 'Máximo, mínimo, cierre y apertura de hoy.'], ['prof', 'Perfil de volumen', 'Punto de control y área de valor de la sesión cargada.'],
+    ['FLUJO DE ÓRDENES'], ['imb', 'Desbalances', 'Resalta los niveles donde un lado domina.'], ['zones', 'Zonas apiladas', 'Tres o más desbalances seguidos; viven hasta que el precio las cruza.'], ['poc', 'Punto de control por vela', 'El nivel con más volumen de cada vela.'], ['big', 'Órdenes de gran tamaño', 'Las agresiones más grandes, en su precio exacto.'], ['liq', 'Liquidaciones', 'Posiciones cerradas a la fuerza por el exchange.'], ['ice', 'Icebergs y muros retirados', 'Órdenes ocultas que se recargan y muros que se retiran antes de tocarse.'], ['cvds', 'CVD por tamaño', 'Separa la presión de las órdenes grandes de la de las chicas.'],
+    ['CONTEXTO'], ['sess', 'Perfil por sesión', 'Asia, Londres y Nueva York.'], ['cal', 'Agenda económica', 'Datos de alto impacto sobre el gráfico (app de escritorio).'], ['heat', 'Liquidez de fondo', 'El libro de órdenes en el tiempo, detrás de las velas.'], ['stats', 'Estadística por vela', 'Volumen, delta y extremos debajo del gráfico.']];
   function showInd() {
-    $('indP').innerHTML = '<h4>Indicadores</h4>' + INDS.map(r => r.length === 1 ? `<h5>${r[0]}</h5>` :
+    $('indP').innerHTML = '<h4>Indicadores</h4><p>Elige qué ves sobre el gráfico. Se guarda en tu cuenta.</p>' + INDS.map(r => r.length === 1 ? `<h5>${r[0]}</h5>` :
       `<label><input type="checkbox" data-k="${r[0]}"${cfg.ind[r[0]] ? ' checked' : ''}><span>${r[1]}${r[2] ? `<br><small>${r[2]}</small>` : ''}</span>${r[3] ? `<input type="number" min="2" max="500" data-n="${r[3]}" value="${cfg[r[3]]}">` : ''}</label>`).join('') +
-      `<h5>FILTROS</h5><label><span>Trade grande: mínimo<br><small>en múltiplos de ${fv(sym.big)} (el tamaño base de este mercado)</small></span><input type="number" min="1" step="1" data-n="bigX" value="${cfg.bigX}"></label>` +
-      `<label><span>Marcar niveles con volumen mayor o igual a<br><small>0 = apagado · trade grande aquí = ${fv(sym.big)}</small></span><input type="number" min="0" step="any" data-n="srch" value="${cfg.srch}"></label>`;
+      `<h5>FILTROS</h5><label><span>Tamaño mínimo de orden grande<br><small>En múltiplos de ${fv(sym.big)}, el tamaño base de este mercado.</small></span><input type="number" min="1" step="1" data-n="bigX" value="${cfg.bigX}"></label>` +
+      `<label><span>Resaltar niveles con volumen desde<br><small>Cero lo apaga. Referencia: ${fv(sym.big)}.</small></span><input type="number" min="0" step="any" data-n="srch" value="${cfg.srch}"></label>`;
   }
   $('indB').onclick = () => toggle('indP', showInd);
   $('indP').oninput = e => {
@@ -843,9 +847,10 @@
   }
   function showAl() {
     const e = $('alBox'); if (!e || $('pAl').hidden) return;
-    e.innerHTML = `<label><input type="checkbox" data-c="alSnd"${cfg.alSnd !== 0 ? ' checked' : ''}>Sonido al avisar</label><label><input type="checkbox" data-c="alBig"${cfg.alBig ? ' checked' : ''}>Avisar trades muy grandes</label>
-      <h6>ALERTAS DE PRECIO · ${sym.id}</h6>` + (AL.length ? AL.map((a, i) => `<div class="it"><span>${fp(a.p)}</span><button data-x="${i}">Quitar</button></div>`).join('') : '<p>Ninguna. Elige la campana en la barra de herramientas (o la tecla A) y haz clic en el precio.</p>') +
-      `<h6>ÚLTIMOS AVISOS</h6>` + (alLog.length ? alLog.slice(0, 12).map(l => `<div class="it"><span>${ft(l.t, 1)} · ${l.body}</span></div>`).join('') : '<p>Todavía no hay avisos.</p>');
+    const sw = (k, t, s, on) => `<label class="sw"><input type="checkbox" data-c="${k}"${on ? ' checked' : ''}><span><b>${t}</b><small>${s}</small></span></label>`;
+    e.innerHTML = `<h6>Preferencias</h6>` + sw('alSnd', 'Sonido', 'Un tono breve con cada aviso.', cfg.alSnd !== 0) + sw('alBig', 'Órdenes de gran tamaño', 'Te avisa cuando entra una orden tres veces mayor que tu filtro.', cfg.alBig) +
+      `<h6>Niveles de precio · ${sym.id.replace(/USDT$/, '')}</h6>` + (AL.length ? '<div class="card">' + AL.map((a, i) => `<div class="it"><span>${fp(a.p)}</span><button data-x="${i}">Quitar</button></div>`).join('') + '</div>' : `<div class="card empty"><svg viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 21h4"/></svg><span>Sin niveles activos.</span><span>Pulsa <b>A</b> y haz clic en el gráfico para crear uno.</span></div>`) +
+      `<h6>Historial</h6>` + (alLog.length ? '<div class="card">' + alLog.slice(0, 12).map(l => `<div class="it"><span>${l.body}</span><span style="color:var(--mut2)">${ft(l.t)}</span></div>`).join('') + '</div>' : `<div class="card empty"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg><span>Aún no hay avisos en esta sesión.</span></div>`);
   }
   $('alBox').onclick = e => { const b = e.target.closest('[data-x]'); if (b) { AL.splice(+b.dataset.x, 1); saveAL(); dirty = true; } };
   $('alBox').onchange = e => { const k = e.target.dataset.c; if (k) { cfg[k] = e.target.checked ? 1 : 0; saveCfg(); } };
@@ -941,7 +946,7 @@
 
   /* ---------- atajos de teclado ---------- */
   const KEYS = [['1', 'Velas'], ['2', 'Clusters'], ['3', 'Números'], ['H', 'Línea horizontal'], ['T', 'Línea de tendencia'], ['R', 'Zona'], ['M', 'Regla'], ['A', 'Alerta de precio'], ['F', 'Seguir el precio'], ['G', 'Gráfico / Heatmap'], ['Espacio', 'Pausar o seguir el replay'], ['Esc', 'Soltar la herramienta']];
-  $('helpB').onclick = () => toggle('helpP', () => { $('helpP').innerHTML = '<h4>Atajos de teclado</h4>' + KEYS.map(k => `<div><kbd>${k[0]}</kbd>${k[1]}</div>`).join('') + '<p style="margin-top:10px">Rueda = zoom · Shift + rueda = zoom del precio · doble clic = seguir · clic derecho sobre un dibujo o alerta = borrarlo.</p>'; });
+  $('helpB').onclick = () => toggle('helpP', () => { $('helpP').innerHTML = '<h4>Atajos de teclado</h4><p>Todo sin soltar el mouse del gráfico.</p>' + KEYS.map(k => `<div><kbd>${k[0]}</kbd>${k[1]}</div>`).join('') + '<p style="margin-top:10px">Rueda = zoom · Shift + rueda = zoom del precio · doble clic = seguir · clic derecho sobre un dibujo o alerta = borrarlo.</p>'; });
   window.addEventListener('keydown', e => {
     if (e.metaKey || e.ctrlKey || e.altKey || /INPUT|SELECT|TEXTAREA/.test(e.target.tagName) || document.body.classList.contains('multi')) return;
     const k = e.key.toLowerCase(), z = { 1: 7, 2: 30, 3: 96 }[k], tl = { h: 'h', t: 'line', r: 'rect', m: 'ruler', a: 'alert' }[k];

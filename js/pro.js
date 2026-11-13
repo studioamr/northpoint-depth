@@ -55,14 +55,15 @@
     let pk = 0, eq = 0, dd = 0; for (const x of L.slice().reverse()) { eq += x.pnl; pk = Math.max(pk, eq); dd = Math.max(dd, pk - eq); }
     return { n: L.length, net, win: L.length ? w.length / L.length : 0, pf: gl ? gw / gl : (gw ? Infinity : 0), aw: w.length ? gw / w.length : 0, al: l.length ? gl / l.length : 0, exp: L.length ? net / L.length : 0, dd, best: L.length ? Math.max(...L.map(x => x.pnl)) : 0, worst: L.length ? Math.min(...L.map(x => x.pnl)) : 0 };
   }
+  const sw = (attr, t, sub, on) => `<label class="sw"><input type="checkbox" ${attr}${on ? ' checked' : ''}><span><b>${t}</b>${sub ? `<small>${sub}</small>` : ''}</span></label>`;
   function paintJr() {
     if (!vis('pJr')) return;
     const today = JR.filter(x => dayKey(x.t) === dayKey(Date.now())), s = stats(today);
-    $('jrBox').innerHTML = `<h6 style="margin-top:0">HOY · TODAS LAS CUENTAS</h6>
-      <div class="kp" style="margin:0 0 6px"><div><span>Operaciones</span><b>${s.n}</b></div><div><span>Aciertos</span><b>${Math.round(s.win * 100)}%</b></div><div><span>P/L neto</span><b class="${s.net >= 0 ? 'u' : 'd'}">${money(s.net)}</b></div><div><span>Factor</span><b>${s.pf === Infinity ? '∞' : s.pf.toFixed(2)}</b></div></div>
-      <h6>SETUP DE LA PRÓXIMA ENTRADA</h6><div class="chips" id="jrTags">${SETUPS().map(x => `<button data-tg="${esc(x)}" class="${x === tag ? 'on' : ''}">${esc(x)}</button>`).join('')}<button data-tg="+">+ otro</button></div>
-      <h6>ÚLTIMAS</h6>` + (JR.slice(0, 8).map(x => `<div class="it"><span>${N.ft(x.t)} ${esc(x.sym.replace(/USDT$/, ''))} <span class="${x.side > 0 ? 'u' : 'd'}">${x.side > 0 ? 'L' : 'C'}</span> <small style="color:var(--mut)">${esc(x.mode)}</small></span><span class="${x.pnl >= 0 ? 'u' : 'd'}">${money(x.pnl)}</span></div>`).join('') || '<p>Todavía no hay operaciones. Cada entrada guarda una captura del gráfico y su setup.</p>') +
-      `<button id="jrOpen" style="width:100%;margin-top:12px">Abrir diario completo</button>`;
+    $('jrBox').innerHTML = `<h6>Hoy</h6><div class="card"><div class="stat"><div><small>Resultado</small><b class="${s.net >= 0 ? 'u' : 'd'}">${money(s.net)}</b></div><div><small>Operaciones</small><b>${s.n}</b></div><div><small>Acierto</small><b>${Math.round(s.win * 100)}%</b></div><div><small>Factor</small><b>${s.pf === Infinity ? '∞' : s.pf.toFixed(2)}</b></div></div></div>
+      <h6>Setup de tu próxima entrada</h6><div class="card"><div class="chips" id="jrTags">${SETUPS().map(x => `<button data-tg="${esc(x)}" class="${x === tag ? 'on' : ''}">${esc(x)}</button>`).join('')}<button data-tg="+">+ Nuevo</button></div><p style="margin:10px 2px 0">Al entrar se guarda una captura del gráfico con este setup.</p></div>
+      <h6>Recientes</h6>` + (JR.length ? '<div class="card">' + JR.slice(0, 7).map(x => `<div class="it"><span>${esc(x.sym.replace(/USDT$/, ''))} <span class="${x.side > 0 ? 'u' : 'd'}">${x.side > 0 ? 'Largo' : 'Corto'}</span> <span style="color:var(--mut2)">· ${esc(x.setup || x.mode)}</span></span><span class="${x.pnl >= 0 ? 'u' : 'd'}">${money(x.pnl)}</span></div>`).join('') + '</div>'
+      : '<div class="card empty"><svg viewBox="0 0 24 24"><path d="M5 4h11l3 3v13H5z"/><path d="M9 10h6M9 14h6"/></svg><span>Tu diario está vacío.</span><span>Cada operación se registra sola, con su captura.</span></div>') +
+      `<button id="jrOpen" class="pri wide">Abrir diario</button>`;
   }
   $('jrBox').addEventListener('click', e => {
     const b = e.target.closest('[data-tg]');
@@ -148,10 +149,10 @@
     const m = curMode(); if (m === 'replay' || m === 'reto') return { m, ok: true };
     const d = todayOf(m), open = B.mode === 'sim' ? (N.sim.pos ? (N.eng.last - N.sim.avg) * N.sym.tick * N.sim.pos : 0) : (B.pos ? B.pos.upl : 0), net = d.pnl + open;
     let why = '';
-    if (R.maxLoss > 0 && net <= -R.maxLoss) why = 'Llegaste a tu pérdida máxima del día ($' + R.maxLoss + ').';
-    else if (R.target > 0 && d.pnl >= R.target) why = 'Ya cumpliste tu objetivo del día ($' + R.target + ').';
-    else if (R.maxDD > 0 && ddOf(m) >= R.maxDD) why = 'Llegaste a tu caída máxima de la cuenta ($' + R.maxDD + ').';
-    else if (R.maxTrades > 0 && d.n >= R.maxTrades) why = 'Llegaste a tu máximo de ' + R.maxTrades + ' operaciones por día.';
+    if (R.maxLoss > 0 && net <= -R.maxLoss) why = 'Tocaste tu pérdida máxima diaria de $' + R.maxLoss + '.';
+    else if (R.target > 0 && d.pnl >= R.target) why = 'Cumpliste tu meta diaria de $' + R.target + '.';
+    else if (R.maxDD > 0 && ddOf(m) >= R.maxDD) why = 'Tocaste tu caída máxima total de $' + R.maxDD + '.';
+    else if (R.maxTrades > 0 && d.n >= R.maxTrades) why = 'Llegaste a tus ' + R.maxTrades + ' operaciones del día.';
     return { m, d, net, ok: !why, why };
   }
   H.can.push((side, q, why) => {
@@ -159,11 +160,11 @@
     const pos = B.mode === 'sim' ? N.sim.pos : (B.pos ? B.pos.amt : 0), reduces = pos && Math.sign(pos) !== side && q <= Math.abs(pos) + 1e-12;
     if (reduces || why === 'stop' || why === 'objetivo') return true;          // cerrar siempre se permite
     if (R.maxQty > 0 && Math.abs(pos) + q > R.maxQty + 1e-12) { N.ping('Regla de la cuenta', 'El tamaño pasa tu máximo de ' + R.maxQty + '.'); return false; }
-    const s = rulesState(); if (!s.ok) { N.ping('Operación bloqueada', s.why); return false; }
+    const s = rulesState(); if (!s.ok) { N.ping('Entrada bloqueada', s.why); return false; }
     return true;
   });
   let warnedDay = '';
-  function rulesCheckAfter() { const s = rulesState(); if (R.on && !s.ok && warnedDay !== dayKey(Date.now()) + s.why) { warnedDay = dayKey(Date.now()) + s.why; N.ping('Regla de la cuenta', s.why + ' Ya no puedes abrir nuevas operaciones hoy.'); } }
+  function rulesCheckAfter() { const s = rulesState(); if (R.on && !s.ok && warnedDay !== dayKey(Date.now()) + s.why) { warnedDay = dayKey(Date.now()) + s.why; N.ping('Límite alcanzado', s.why + ' Las nuevas entradas quedan bloqueadas por hoy.'); } }
   const chip = document.createElement('div'); chip.className = 'chip'; chip.style.cursor = 'pointer'; chip.title = 'Reglas de la cuenta'; $('aud').after(chip);
   chip.onclick = () => $('rtabs').querySelector('[data-p="pAc"]').click();
   function paintChip() {
@@ -262,38 +263,84 @@
   // al soltar el stop u objetivo en el gráfico, se re-colocan
   window.addEventListener('mouseup', () => { if (B.mode !== 'sim' && B.pos && B.pos.amt) setTimeout(placeBrackets, 400); });
 
+  /* ---- Exness y Tradeify: igual que NORTHPOINT, se inicia sesión en su propia ventana (solo app de escritorio) ---- */
+  const DESK = location.hostname === '127.0.0.1';
+  const XC = { exness: { n: 'Exness', on: get('cx.exness', 0), accts: [], err: '', ct: 0 }, tradeify: { n: 'Tradeify', on: get('cx.tradeify', 0), accts: [], err: '' } };
+  async function brk(k, ruta) { const r = await fetch('/brk/' + k + ruta, { cache: 'no-store' }); const t = await r.text(); let j; try { j = JSON.parse(t); } catch (e) { throw new Error('respuesta inválida'); } if (j && j.e) throw new Error(j.e); return j; }
+  async function readExness() {
+    const C = XC.exness, all = await brk('exness', '/v4/trading-provider/api/v2/accounts');
+    const arch = a => a.is_archived || a.is_hidden || a.archived_at || a.archived || /archiv/i.test(a.status || '');
+    C.accts = (all || []).filter(a => a.platform === 'mt5' && !arch(a)).map(a => ({ id: a.account_number, name: a.name || a.account_type, real: !!a.is_real, type: a.account_type, cur: a.currency || 'USD', bal: +a.balance || 0, eq: +a.equity || 0, flt: +a.floating || 0 }));
+    if (Date.now() - C.ct < 30000) return; C.ct = Date.now();
+    const seen = new Set(get('exSeen', []));                  // los cierres entran solos al diario, una vez
+    for (const a of C.accts) {
+      const j = await brk('exness', `/v4/orders-history/orders/${a.id}?accountNumber=${a.id}&limit=50&offset=0&sort=close_time_desc&closed=1&platform=mt5`);
+      for (const o of (j.orders || []).slice().reverse()) {
+        if (!o.close_time) continue; const key = a.id + ':' + o.deal_id; if (seen.has(key)) continue; seen.add(key);
+        record({ t: +o.close_time, t0: +o.open_time || +o.close_time, sym: o.symbol, side: o.action === 'buy' ? 1 : -1, q: +o.volume_position || 0, a: +o.open_price, b: +o.close_price, pnl: (+o.profit || 0) + (+o.commission || 0) + (+o.swap || 0), mode: 'exness', why: a.real ? 'real' : 'demo' });
+      }
+    }
+    put('exSeen', [...seen].slice(-6000));
+  }
+  async function readTradeify() {
+    const j = await brk('tradeify', '/api/dashboard/account-overview'), n = v => v == null || v === '' || isNaN(+v) ? null : +v;
+    XC.tradeify.accts = ((j && j.data && j.data.data) || []).map(x => { const bal = n(x.account_balance), ini = n(x.initial_balance), floor = n(x.max_trailing_drawdown);
+      return { id: x.id, name: x.account_type || 'Cuenta', status: x.funded_status || x.account_status || '', blown: /blown|fail|breach/i.test(x.account_status || ''), bal, ini, pnl: n(x.net_pnl) ?? (bal != null && ini != null ? bal - ini : null), cushion: bal != null && floor != null ? bal - floor : null, goal: n(x.profit_target), dll: n(x.daily_loss_limit), payout: x.available_for_payout }; });
+  }
+  async function readConn() {
+    if (!DESK) return;
+    for (const k of ['exness', 'tradeify']) { const C = XC[k]; if (!C.on) continue;
+      try { await (k === 'exness' ? readExness() : readTradeify()); C.err = ''; } catch (e) { C.err = e.message; } }
+    paintAc();
+  }
+  setInterval(readConn, 15000); setTimeout(readConn, 2500);
+
   /* ---- panel Cuenta ---- */
+  const connCard = (lg, bg, name, sub, right) => `<div class="conn"><div class="lg" style="background:${bg}">${lg}</div><div class="tx"><b>${name}</b><small>${sub}</small></div>${right}</div>`;
+  function xcBlock(k) {
+    const C = XC[k], logo = k === 'exness' ? ['Ex', 'linear-gradient(135deg,#ffcf24,#f5a300)'] : ['Tf', 'linear-gradient(135deg,#7c5cff,#3d5afe)'];
+    if (!DESK) return connCard(logo[0], logo[1], C.n, 'Disponible en la app de escritorio', '<span class="badge">Escritorio</span>');
+    if (!C.on) return connCard(logo[0], logo[1], C.n, k === 'exness' ? 'Tus cuentas MT5: saldo, flotante y cierres al diario' : 'Tus cuentas de fondeo: colchón, meta y límite diario', `<button data-cx-on="${k}" class="pri">Conectar</button>`);
+    const st = C.err === 'login' ? '<span class="badge live"><i></i>Inicia sesión</span>' : C.err === 'cargando' || (!C.accts.length && !C.err) ? '<span class="badge"><i></i>Conectando</span>' : C.err ? '<span class="badge live"><i></i>Error</span>' : '<span class="badge ok"><i></i>Conectado</span>';
+    let h = connCard(logo[0], logo[1], C.n, C.accts.length ? C.accts.length + (C.accts.length === 1 ? ' cuenta' : ' cuentas') : C.err === 'login' ? 'Inicia sesión en la ventana de ' + C.n : C.err && C.err !== 'cargando' ? esc(C.err) : 'Leyendo tus cuentas…', st);
+    if (k === 'exness') h += C.accts.map(a => `<div class="acct"><div class="nm"><b>${esc(a.name)}</b><span class="badge${a.real ? ' live' : ''}">${a.real ? 'Real' : 'Demo'} · #${a.id}</span></div><div class="row"><span>Balance</span><span>${a.bal.toFixed(2)} ${esc(a.cur)}</span></div><div class="row"><span>Equidad</span><span>${a.eq.toFixed(2)}</span></div><div class="row"><span>Flotante</span><span class="${a.flt >= 0 ? 'u' : 'd'}">${money(a.flt)}</span></div></div>`).join('');
+    else h += C.accts.map(a => { const pg = a.goal && a.pnl != null ? Math.max(0, Math.min(100, a.pnl / a.goal * 100)) : 0;
+      return `<div class="acct"><div class="nm"><b>${esc(a.name)}</b><span class="badge${a.blown ? ' live' : ' ok'}">${a.blown ? 'Perdida' : esc(a.status || 'Activa')}</span></div><div class="row"><span>Balance</span><span>${a.bal != null ? '$' + a.bal.toFixed(2) : '—'}</span></div><div class="row"><span>Resultado</span><span class="${(a.pnl || 0) >= 0 ? 'u' : 'd'}">${a.pnl != null ? money(a.pnl) : '—'}</span></div><div class="row"><span>Colchón al límite</span><span>${a.cushion != null ? '$' + a.cushion.toFixed(2) : '—'}</span></div>${a.dll != null ? `<div class="row"><span>Pérdida diaria máx.</span><span>$${a.dll.toFixed(0)}</span></div>` : ''}${a.goal ? `<div class="bar"><i style="width:${pg}%"></i></div><div class="row"><span>Hacia la meta de $${a.goal.toFixed(0)}</span><span>${Math.round(pg)}%</span></div>` : ''}${a.dll != null ? `<button class="wide" data-tf-rule="${esc(String(a.id))}">Usar su límite diario en mis reglas</button>` : ''}</div>`; }).join('');
+    h += `<div class="btn-row"><button data-cx-win="${k}">Abrir ventana de ${C.n}</button><button data-cx-off="${k}">Desconectar</button></div>`;
+    return h;
+  }
   function paintAc() {
     if (!vis('pAc')) { paintChip(); return; }
     if (document.activeElement && $('acBox').contains(document.activeElement) && /INPUT|SELECT/.test(document.activeElement.tagName)) { paintChip(); return; }
-    const s = rulesState(), real = B.mode === 'real';
-    $('acBox').innerHTML = `<h6 style="margin-top:0">CONEXIÓN</h6>
-      <div class="fld"><span>Cuenta</span><select id="bMode"><option value="sim"${B.mode === 'sim' ? ' selected' : ''}>Simulado</option><option value="prueba"${B.mode === 'prueba' ? ' selected' : ''}>Binance prueba</option><option value="real"${real ? ' selected' : ''}>Binance real</option></select></div>
-      ${real ? '<div class="warn">Cuenta REAL: las órdenes mueven dinero de verdad en tu cuenta de Binance Futures.</div>' : ''}
-      ${B.mode === 'sim' ? '<p>Las órdenes no salen al mercado. Para operar de verdad, conecta tu cuenta de Binance Futures con una llave de API.</p>' : ''}
-      <div class="fld"><span>Llave de API</span><input id="bK" type="password" autocomplete="off" value="${esc(B.keys.k)}" placeholder="API key"></div>
-      <div class="fld"><span>Clave secreta</span><input id="bS" type="password" autocomplete="off" value="${esc(B.keys.s)}" placeholder="Secret key"></div>
-      <label><input type="checkbox" id="bSave"${B.save ? ' checked' : ''}>Recordar en este equipo</label>
-      <p>Crea la llave en Binance con permiso de <b>Futuros</b> y <b>sin</b> permiso de retiros. Para practicar usa una llave de <b>testnet.binancefuture.com</b> y elige "Binance prueba".</p>
-      ${B.mode !== 'sim' ? `<div class="it"><span>Saldo USDT</span><span>${B.bal ? B.bal.total.toFixed(2) : '…'}</span></div><div class="it"><span>Disponible</span><span>${B.bal ? B.bal.avail.toFixed(2) : '…'}</span></div>
-        <div class="it"><span>Posición ${esc(N.sym.id)}</span><span>${B.pos ? (B.pos.amt || 0) : '…'}</span></div><div class="it"><span>P/L abierto</span><span class="${B.pos && B.pos.upl >= 0 ? 'u' : 'd'}">${B.pos ? money(B.pos.upl) : '…'}</span></div>
-        ${B.pos && B.pos.liq ? `<div class="it"><span>Liquidación</span><span>${B.pos.liq}</span></div>` : ''}${B.err ? `<div class="warn">${esc(B.err)}</div>` : ''}` : ''}
-      <h6>COPIADOR DE CUENTAS</h6><label><input type="checkbox" id="bCopy"${B.copyOn ? ' checked' : ''}>Replicar cada orden en estas cuentas</label>
-      ${B.copies.map((c, i) => `<div class="it"><span>${esc(c.name)} · x${c.mult}</span><button data-cx="${i}">Quitar</button></div>`).join('') || '<p>Sin cuentas extra.</p>'}<button id="bAddC">Agregar cuenta</button>
-      <h6>REGLAS DE LA CUENTA</h6><label><input type="checkbox" id="rOn"${R.on ? ' checked' : ''}>Bloquear nuevas entradas al tocar un límite</label>
-      <div class="fld"><span>Pérdida máxima del día ($)</span><input id="rL" type="number" min="0" value="${R.maxLoss}"></div>
-      <div class="fld"><span>Objetivo del día ($, 0 = sin tope)</span><input id="rT" type="number" min="0" value="${R.target}"></div>
-      <div class="fld"><span>Caída máxima de la cuenta ($)</span><input id="rD" type="number" min="0" value="${R.maxDD}"></div>
-      <div class="fld"><span>Tamaño máximo (0 = libre)</span><input id="rQ" type="number" min="0" step="any" value="${R.maxQty}"></div>
-      <div class="fld"><span>Operaciones por día (0 = libre)</span><input id="rN" type="number" min="0" value="${R.maxTrades}"></div>
-      <div class="${s.ok ? 'it' : 'warn'}"><span>${s.ok ? 'Hoy en ' + esc(s.m) + ': ' + money(s.net || 0) : esc(s.why)}</span></div>`;
+    const s = rulesState(), real = B.mode === 'real', badge = B.mode === 'sim' ? '<span class="badge">Simulado</span>' : real ? '<span class="badge live"><i></i>En real</span>' : '<span class="badge ok"><i></i>Prueba</span>';
+    const sc = B.scroll = $('acBox').parentNode.scrollTop;
+    $('acBox').innerHTML = `<h6>Conexiones</h6>
+      ${connCard('B', 'linear-gradient(135deg,#f3ba2f,#e0a100)', 'Binance Futures', 'Opera desde el gráfico: órdenes, stop y objetivo', badge)}
+      <div class="card"><div class="fld"><span>Modo</span><select id="bMode"><option value="sim"${B.mode === 'sim' ? ' selected' : ''}>Simulado</option><option value="prueba"${B.mode === 'prueba' ? ' selected' : ''}>Cuenta de prueba</option><option value="real"${real ? ' selected' : ''}>Cuenta real</option></select></div>
+        ${real ? '<div class="warn">Estás en tu cuenta real. Cada orden se ejecuta en el mercado con tu dinero.</div>' : ''}
+        <div class="fld"><span>API key</span><input id="bK" type="password" autocomplete="off" value="${esc(B.keys.k)}" placeholder="Pega tu llave"></div>
+        <div class="fld"><span>Secret key</span><input id="bS" type="password" autocomplete="off" value="${esc(B.keys.s)}" placeholder="Pega tu clave"></div>
+        ${sw('id="bSave"', 'Recordar en este equipo', 'Las llaves nunca salen de tu computadora.', B.save)}
+        <p>Crea la llave en Binance con permiso de <b>Futuros</b> y sin permiso de retiro. Para practicar, usa una llave de <b>testnet.binancefuture.com</b>.</p>
+        ${B.mode !== 'sim' ? `<div class="stat"><div><small>Saldo USDT</small><b>${B.bal ? B.bal.total.toFixed(2) : '…'}</b></div><div><small>Disponible</small><b>${B.bal ? B.bal.avail.toFixed(2) : '…'}</b></div><div><small>Posición</small><b>${B.pos ? (B.pos.amt || 0) : '…'}</b></div><div><small>Flotante</small><b class="${B.pos && B.pos.upl >= 0 ? 'u' : 'd'}">${B.pos ? money(B.pos.upl) : '…'}</b></div></div>${B.err ? `<div class="warn">${esc(B.err)}</div>` : ''}` : ''}</div>
+      ${xcBlock('exness')}${xcBlock('tradeify')}
+      <h6>Copiar operaciones</h6><div class="card">${sw('id="bCopy"', 'Replicar en otras cuentas', 'Cada orden de Binance se copia con su multiplicador.', B.copyOn)}
+        ${B.copies.map((c, i) => `<div class="it"><span>${esc(c.name)} · ×${c.mult}</span><button data-cx="${i}">Quitar</button></div>`).join('') || '<p>Aún no agregas cuentas.</p>'}<button id="bAddC" class="wide">Agregar cuenta</button></div>
+      <h6>Reglas de riesgo</h6><div class="card">${sw('id="rOn"', 'Proteger la cuenta', 'Al tocar un límite se bloquean nuevas entradas. Cerrar siempre se permite.', R.on)}
+        <div class="fld"><span>Pérdida máxima diaria</span><input id="rL" type="number" min="0" value="${R.maxLoss}"></div>
+        <div class="fld"><span>Meta diaria</span><input id="rT" type="number" min="0" value="${R.target}" placeholder="Sin tope"></div>
+        <div class="fld"><span>Caída máxima total</span><input id="rD" type="number" min="0" value="${R.maxDD}"></div>
+        <div class="fld"><span>Tamaño máximo</span><input id="rQ" type="number" min="0" step="any" value="${R.maxQty}"></div>
+        <div class="fld"><span>Operaciones por día</span><input id="rN" type="number" min="0" value="${R.maxTrades}"></div>
+        <div class="${s.ok ? 'info2' : 'warn'}">${s.ok ? 'Hoy (' + esc({ sim: 'simulado', real: 'real', prueba: 'prueba', replay: 'replay', reto: 'reto' }[s.m] || s.m) + '): ' + money(s.net || 0) + (R.maxLoss ? ' · te quedan $' + Math.max(0, R.maxLoss + (s.net || 0)).toFixed(2) + ' antes del límite' : '') : esc(s.why)}</div></div>`;
+    $('acBox').parentNode.scrollTop = sc;
     paintChip();
   }
   $('acBox').addEventListener('change', e => {
     const t = e.target, id = t.id;
     if (id === 'bMode') {
       const m = t.value;
-      if (m !== 'sim' && (!B.keys.k || !B.keys.s)) { N.ping('Falta la llave', 'Pega tu llave de API y clave secreta primero.'); t.value = B.mode; return; }
+      if (m !== 'sim' && (!B.keys.k || !B.keys.s)) { N.ping('Falta tu llave de API', 'Pégala arriba y vuelve a elegir el modo.'); t.value = B.mode; return; }
       if (m === 'real' && !confirm('Vas a conectar tu cuenta REAL de Binance Futures. Cada orden de la terminal se enviará al mercado con dinero real. ¿Continuar?')) { t.value = B.mode; return; }
       B.mode = m; put('bmode', m); startBroker(); paintAc(); return;
     }
@@ -302,9 +349,14 @@
     if (/^r[OLTDQN]$/.test(id)) { R = { on: $('rOn').checked ? 1 : 0, maxLoss: +$('rL').value || 0, target: +$('rT').value || 0, maxDD: +$('rD').value || 0, maxQty: +$('rQ').value || 0, maxTrades: +$('rN').value || 0 }; put('rules', R); paintChip(); }
   });
   $('acBox').addEventListener('click', e => {
-    const t = e.target;
+    const t = e.target.closest('button'); if (!t) return;
     if (t.dataset.cx != null) { B.copies.splice(+t.dataset.cx, 1); put('bcopies', B.copies); paintAc(); return; }
-    if (t.id === 'bAddC') N.ask('Nombre de la cuenta', name => N.ask('Llave de API de ' + name, k => N.ask('Clave secreta de ' + name, s => N.ask('Multiplicador de tamaño (1 = igual)', m => { B.copies.push({ name, k, s, mult: Math.max(0.01, +m || 1) }); put('bcopies', B.copies); paintAc(); }))));
+    if (t.id === 'bAddC') { N.ask('Nombre de la cuenta', name => N.ask('API key de ' + name, k => N.ask('Secret key de ' + name, s => N.ask('Multiplicador de tamaño (1 = igual)', m => { B.copies.push({ name, k, s, mult: Math.max(0.01, +m || 1) }); put('bcopies', B.copies); paintAc(); })))); return; }
+    const k = t.dataset.cxOn || t.dataset.cxWin || t.dataset.cxOff;
+    if (t.dataset.cxOn) { XC[k].on = 1; put('cx.' + k, 1); XC[k].err = 'cargando'; fetch('/brk/' + k + '/login'); paintAc(); setTimeout(readConn, 4000); return; }
+    if (t.dataset.cxWin) { fetch('/brk/' + k + '/login'); return; }
+    if (t.dataset.cxOff) { XC[k].on = 0; XC[k].accts = []; put('cx.' + k, 0); paintAc(); return; }
+    if (t.dataset.tfRule) { const a = XC.tradeify.accts.find(x => String(x.id) === t.dataset.tfRule); if (a && a.dll != null) { R.maxLoss = Math.round(a.dll); R.on = 1; put('rules', R); N.ping('Reglas actualizadas', 'Tu pérdida máxima diaria ahora es $' + R.maxLoss + ', igual que tu cuenta de Tradeify.'); paintAc(); } }
   });
 
   /* =================== MODO RETO y REPLAY POR FECHA =================== */
@@ -460,10 +512,10 @@
   H.ping.push((title, body) => { if (tg.tok && tg.chat) fetch('https://api.telegram.org/bot' + encodeURIComponent(tg.tok) + '/sendMessage', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: tg.chat, text: 'NORTHPOINT DEPTH · ' + title + '\n' + body }) }).catch(() => {}); });
   function paintAl2() {
     if (!vis('pAl') || ($('alBox2').contains(document.activeElement) && /INPUT/.test(document.activeElement.tagName))) return;
-    const cb = (k, t) => `<label><input type="checkbox" data-al="${k}"${get(k, 0) ? ' checked' : ''}>${t}</label>`;
-    $('alBox2').innerHTML = `<h6 style="margin-top:0">AVISAR TAMBIÉN CUANDO</h6>${cb('alLine', 'El precio toque mis líneas horizontales')}${cb('alVW', 'El precio cruce el VWAP')}${cb('alZone', 'Aparezca un desbalance apilado')}${cb('alIce', 'Se detecte un iceberg')}${cb('alPull', 'Se retire un muro del libro')}
-      <h6>AVISOS AL CELULAR (TELEGRAM)</h6><p>Crea un bot con @BotFather, pega su token y tu número de chat (@userinfobot te lo da).</p>
-      <div class="fld"><span>Token del bot</span><input id="tgT" type="password" value="${esc(tg.tok)}"></div><div class="fld"><span>Chat</span><input id="tgC" value="${esc(tg.chat)}"></div><button id="tgTest">Enviar prueba</button>`;
+    const t = (k, a, b) => sw(`data-al="${k}"`, a, b, get(k, 0));
+    $('alBox2').innerHTML = `<h6>Detecciones</h6>${t('alLine', 'Toque de tus líneas', 'Cuando el precio llega a una línea horizontal que dibujaste.')}${t('alVW', 'Cruce del VWAP', 'Cuando el precio pasa de un lado al otro del VWAP diario.')}${t('alZone', 'Desbalance apilado', 'Cuando aparece una zona nueva en la vela actual.')}${t('alIce', 'Iceberg', 'Órdenes ocultas que se recargan en el mismo precio.')}${t('alPull', 'Muro retirado', 'Una orden grande del libro desaparece sin ejecutarse.')}
+      <h6>En tu teléfono</h6><div class="card"><p style="margin-top:0">Recibe cada aviso en Telegram. Crea un bot con <b>@BotFather</b> y obtén tu número de chat con <b>@userinfobot</b>.</p>
+      <div class="fld"><span>Token del bot</span><input id="tgT" type="password" value="${esc(tg.tok)}" placeholder="123456:ABC…"></div><div class="fld"><span>Número de chat</span><input id="tgC" value="${esc(tg.chat)}" placeholder="Ej. 51234567"></div><button id="tgTest" class="wide">Enviar aviso de prueba</button></div>`;
   }
   $('alBox2').addEventListener('change', e => { const k = e.target.dataset.al; if (k) put(k, e.target.checked ? 1 : 0); if (e.target.id === 'tgT' || e.target.id === 'tgC') { tg = { tok: $('tgT').value.trim(), chat: $('tgC').value.trim() }; put('tg', tg); } });
   $('alBox2').addEventListener('click', e => { if (e.target.id === 'tgTest') { tg = { tok: $('tgT').value.trim(), chat: $('tgC').value.trim() }; put('tg', tg); N.ping('Prueba', 'Los avisos llegarán aquí.'); } });
@@ -478,17 +530,16 @@
       const all = await Promise.all(ids.map(s => fetch(N.REST + 'klines?symbol=' + s + '&interval=1m&limit=120').then(r => r.json())));
       const ret = all.map(k => k.slice(1).map((c, i) => Math.log(+c[4] / +k[i][4]))), base = ret[0];
       const cor = (a, b) => { const n = Math.min(a.length, b.length), ma = a.reduce((s, v) => s + v, 0) / n, mb = b.reduce((s, v) => s + v, 0) / n; let c = 0, va = 0, vb = 0; for (let i = 0; i < n; i++) { c += (a[i] - ma) * (b[i] - mb); va += (a[i] - ma) ** 2; vb += (b[i] - mb) ** 2; } return va && vb ? c / Math.sqrt(va * vb) : 0; };
-      $('corr').innerHTML = '<div class="al" style="padding-bottom:0"><h6 style="margin-top:0">CORRELACIÓN 2 H CON ' + esc(N.sym.id.replace(/USDT$/, '')) + '</h6>' + ids.slice(1).map((s, i) => { const r = cor(base, ret[i + 1]), k = all[i + 1], ch = (+k[k.length - 1][4] / +k[0][4] - 1) * 100; return `<div class="it"><span>${s.replace(/USDT$/, '')} <small style="color:var(--mut)">${ch >= 0 ? '+' : ''}${ch.toFixed(2)}%</small></span><span style="color:${r > 0.5 ? N.C.up : r < -0.5 ? N.C.dn : 'var(--mut)'}">${r.toFixed(2)}</span></div>`; }).join('') + '</div>' + calHtml();
+      $('corr').innerHTML = '<div class="al" style="padding-bottom:0"><h6>Correlación · 2 h con ' + esc(N.sym.id.replace(/USDT$/, '')) + '</h6><div class="card">' + ids.slice(1).map((s, i) => { const r = cor(base, ret[i + 1]), k = all[i + 1], ch = (+k[k.length - 1][4] / +k[0][4] - 1) * 100; return `<div class="it"><span>${s.replace(/USDT$/, '')} <small style="color:var(--mut)">${ch >= 0 ? '+' : ''}${ch.toFixed(2)}%</small></span><span style="color:${r > 0.5 ? N.C.up : r < -0.5 ? N.C.dn : 'var(--mut)'}">${r.toFixed(2)}</span></div>`; }).join('') + '</div></div>' + calHtml();
     } catch (e) {}
   }
   /* calendario: solo en la app de escritorio (su servidor local lo trae; el navegador lo bloquea) */
   let CAL = [], calAt = 0;
-  const desk = location.hostname === '127.0.0.1';
-  async function loadCal() { if (!desk || Date.now() - calAt < 15 * 60000) return; calAt = Date.now(); try { const j = await (await fetch('/cal')).json(); CAL = (j || []).filter(e => e.impact === 'High' && (e.country === 'USD' || e.country === 'EUR' || e.country === 'CNY')).map(e => ({ t: Date.parse(e.date), n: e.title, c: e.country })); } catch (e) {} }
+  async function loadCal() { if (!DESK || Date.now() - calAt < 15 * 60000) return; calAt = Date.now(); try { const j = await (await fetch('/cal')).json(); CAL = (j || []).filter(e => e.impact === 'High' && (e.country === 'USD' || e.country === 'EUR' || e.country === 'CNY')).map(e => ({ t: Date.parse(e.date), n: e.title, c: e.country })); } catch (e) {} }
   function calHtml() {
-    if (!desk) return '<div class="al"><h6>DATOS ECONÓMICOS</h6><p>Disponibles en la app de escritorio.</p></div>';
+    if (!DESK) return '<div class="al"><h6>Agenda económica</h6><div class="card empty"><span>La agenda de datos de alto impacto vive en la app de escritorio.</span></div></div>';
     const next = CAL.filter(e => e.t > Date.now() - 3600e3).slice(0, 6);
-    return '<div class="al"><h6>DATOS ECONÓMICOS · ALTO IMPACTO</h6>' + (next.map(e => `<div class="it"><span>${N.fd(e.t)} · ${esc(e.c)}</span><span style="text-align:right;max-width:60%">${esc(e.n)}</span></div>`).join('') || '<p>Sin datos fuertes próximos.</p>') + '</div>';
+    return '<div class="al"><h6>Agenda · alto impacto</h6><div class="card">' + (next.map(e => `<div class="it"><span>${N.fd(e.t)} · ${esc(e.c)}</span><span style="text-align:right;max-width:60%;font-family:var(--sans)">${esc(e.n)}</span></div>`).join('') || '<p>Sin datos fuertes en las próximas horas.</p>') + '</div></div>';
   }
   function drawCal(x, g) {
     if (!CAL.length) return; const t0 = g.A[g.iLo].t0, t1 = g.tNow + 6 * 3600e3;
