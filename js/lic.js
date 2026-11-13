@@ -41,14 +41,14 @@
   }
   function overlay(msg) {
     const d = document.createElement('div');
-    d.style.cssText = 'position:fixed;inset:0;z-index:99;display:grid;place-items:center;background:radial-gradient(700px 420px at 50% 20%,rgba(122,162,255,.16),transparent 70%),#05070a;font:15px Inter,-apple-system,"Helvetica Neue",sans-serif;color:#e8ecf3;padding:20px';
+    d.style.cssText = 'position:fixed;inset:0;z-index:99;display:grid;place-items:center;background:radial-gradient(700px 420px at 50% 20%,rgba(90,176,255,.16),transparent 70%),#03060c;font:15px Inter,-apple-system,"Helvetica Neue",sans-serif;color:#e8ecf3;padding:20px';
     d.innerHTML = '<form style="width:100%;max-width:420px;border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:30px;background:rgba(255,255,255,.035)">' +
-      '<div style="font-weight:700;letter-spacing:.16em;font-size:12px;margin-bottom:22px">NORTHPOINT <b style="color:#7aa2ff">DEPTH</b></div>' +
+      '<div style="font-weight:700;letter-spacing:.16em;font-size:12px;margin-bottom:22px">NORTHPOINT <b style="color:#5ab0ff">DEPTH</b></div>' +
       '<h1 style="font-size:24px;letter-spacing:-.02em;margin:0 0 8px">Activa tu suscripción</h1><p id="lcMsg" style="color:#8791a1;margin:0 0 20px;line-height:1.5"></p>' +
       '<input id="lcKey" placeholder="Tu clave de licencia" autocomplete="off" spellcheck="false" style="width:100%;font:14px ui-monospace,Menlo,monospace;color:#e8ecf3;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.12);border-radius:11px;padding:13px;outline:0">' +
-      '<button id="lcGo" style="width:100%;margin-top:12px;font:600 15px inherit;padding:13px;border-radius:11px;border:0;background:#7aa2ff;color:#05070a;cursor:pointer">Activar</button>' +
-      '<div id="lcErr" style="color:#ff5c70;font-size:13px;min-height:20px;margin-top:10px"></div>' +
-      '<div style="display:flex;justify-content:space-between;font-size:13px;margin-top:8px"><a href="' + C.comprar + '" style="color:#7aa2ff">Ver planes</a><a href="#" id="lcOut" style="color:#8791a1">Cerrar sesión</a></div></form>';
+      '<button id="lcGo" style="width:100%;margin-top:12px;font:600 15px inherit;padding:13px;border-radius:11px;border:0;background:#5ab0ff;color:#03060c;cursor:pointer">Activar</button>' +
+      '<div id="lcErr" style="color:#3d5afe;font-size:13px;min-height:20px;margin-top:10px"></div>' +
+      '<div style="display:flex;justify-content:space-between;font-size:13px;margin-top:8px"><a href="' + C.comprar + '" style="color:#5ab0ff">Ver planes</a><a href="#" id="lcOut" style="color:#8791a1">Cerrar sesión</a></div></form>';
     document.body.appendChild(d);
     d.querySelector('#lcMsg').textContent = msg + ' La clave te llega al comprar tu plan.';
     d.querySelector('#lcOut').onclick = e => { e.preventDefault(); if (window.NPAuth) NPAuth.logout(); location.href = 'login.html'; };

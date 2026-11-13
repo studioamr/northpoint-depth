@@ -10,8 +10,8 @@
   if (PANE) document.body.classList.add('pane');
   const MONO = '"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace';
   const REST = 'https://fapi.binance.com/fapi/v1/';
-  const C = { up: '#3ddc97', dn: '#ff5c70', ac: '#7aa2ff', tx: '#e8ecf3', mut: '#7c8696', line: 'rgba(255,255,255,.06)' };
-  const up = a => `rgba(61,220,151,${a})`, dn = a => `rgba(255,92,112,${a})`, bl = a => `rgba(122,162,255,${a})`;
+  const C = { up: '#22d3ee', dn: '#3d5afe', ac: '#5ab0ff', tx: '#e8ecf3', mut: '#7c8696', line: 'rgba(255,255,255,.06)' };
+  const up = a => `rgba(34,211,238,${a})`, dn = a => `rgba(61,90,254,${a})`, bl = a => `rgba(90,176,255,${a})`;
 
   /* ---------- mercados ---------- */
   /* tick = tamaño real del tick · groups/hg/rng en ticks · qd = decimales de cantidad (respaldo si falla la lista) */
@@ -192,7 +192,7 @@
   function j0(t) { let a = 0, b = heat.length - 1; while (a < b) { const m = (a + b + 1) >> 1; if (heat[m].t <= t) a = m; else b = m - 1; } return a; }
   const LUT = new Uint32Array(256);
   (function () {
-    const S = [[0, 10, 18, 40], [0.35, 26, 58, 150], [0.72, 122, 162, 255], [1, 255, 255, 255]];
+    const S = [[0, 6, 14, 40], [0.35, 18, 52, 150], [0.72, 34, 180, 238], [1, 230, 250, 255]]; // azul marino → cian → hielo
     for (let u = 0; u < 256; u++) {
       const t = Math.pow(u / 255, 0.65); let i = 0; while (i < S.length - 2 && t > S[i + 1][0]) i++;
       const a = S[i], b = S[i + 1], f = (t - a[0]) / (b[0] - a[0]);
@@ -306,7 +306,7 @@
       if (ps) {
         hline(x, Y(ps.vah + g), cw, 'rgba(255,255,255,.22)', [2, 4], 'VAH');
         hline(x, Y(ps.val), cw, 'rgba(255,255,255,.22)', [2, 4], 'VAL');
-        hline(x, Y(ps.poc) - rh / 2, cw, 'rgba(122,162,255,.55)', [6, 4], 'POC');
+        hline(x, Y(ps.poc) - rh / 2, cw, 'rgba(90,176,255,.55)', [6, 4], 'POC');
       }
     }
     if (I.day && day) for (const [nm, p] of day) { const y = Y(p + 0.5); if (y > 0 && y < ch) hline(x, y, cw, 'rgba(232,236,243,.3)', [8, 5], nm + ' ' + fp(p), true); }
@@ -348,8 +348,8 @@
         } else if (num) {
           const a = Math.min(0.4, 0.05 + tot / s.mx * 0.35);
           x.fillStyle = d >= 0 ? up(a) : dn(a); x.fillRect(x0, yT, w, h1);
-          x.textAlign = 'right'; x.font = (im < 0 ? '700 ' : '') + fz + 'px ' + MONO; x.fillStyle = im < 0 ? '#ff97a4' : 'rgba(232,236,243,.7)'; x.fillText(fv(e[0]), mid - 5, ty);
-          x.textAlign = 'left'; x.font = (im > 0 ? '700 ' : '') + fz + 'px ' + MONO; x.fillStyle = im > 0 ? '#86f3c2' : 'rgba(232,236,243,.7)'; x.fillText(fv(e[1]), mid + 5, ty);
+          x.textAlign = 'right'; x.font = (im < 0 ? '700 ' : '') + fz + 'px ' + MONO; x.fillStyle = im < 0 ? '#a8b6ff' : 'rgba(232,236,243,.7)'; x.fillText(fv(e[0]), mid - 5, ty);
+          x.textAlign = 'left'; x.font = (im > 0 ? '700 ' : '') + fz + 'px ' + MONO; x.fillStyle = im > 0 ? '#a5f3fc' : 'rgba(232,236,243,.7)'; x.fillText(fv(e[1]), mid + 5, ty);
           x.fillStyle = 'rgba(255,255,255,.12)'; x.fillRect(mid, yT + 2, 1, h1 - 4);
         } else {
           x.fillStyle = dn(Math.min(0.9, e[0] / s.mxs)); x.fillRect(x0, yT, w / 2, h1);
@@ -373,7 +373,7 @@
     if (I.bands) for (const m of [-2, -1, 1, 2]) path(vw, m, 'rgba(232,236,243,.22)', 1, [3, 3]);
     if (I.vwap) path(vw, 0, 'rgba(232,236,243,.75)', 1.25);
     if (I.ema1) path(e1, 0, '#f0b35e', 1.25);
-    if (I.ema2) path(e2, 0, '#b58cff', 1.25);
+    if (I.ema2) path(e2, 0, '#c7d2fe', 1.25);
     /* trades grandes */
     if (I.big && v.barW >= 6) {
       const tMin = A[iLo].t0, bigMin = sym.big * Math.max(1, +cfg.bigX || 1);
@@ -581,7 +581,7 @@
       if (e) { const w = (e[0] + e[1]) / mp * (pw - 6), ws = w * e[0] / (e[0] + e[1]); x.fillStyle = dn(0.4); x.fillRect(2, y + 2, ws, rh - 4); x.fillStyle = up(0.4); x.fillRect(2 + ws, y + 2, w - ws, rh - 4); }
       if (b) { const w = b / mq * (cwd - 4); x.fillStyle = up(0.2); x.fillRect(xp - w, y + 1, w, rh - 2); x.fillStyle = C.up; x.textAlign = 'right'; x.fillText(fv(b), xp - 5, y + rh / 2); }
       if (a) { const w = a / mq * (cwd - 4); x.fillStyle = dn(0.2); x.fillRect(xa, y + 1, w, rh - 2); x.fillStyle = C.dn; x.textAlign = 'left'; x.fillText(fv(a), xa + 5, y + rh / 2); }
-      if (k === lk) { x.fillStyle = 'rgba(122,162,255,.2)'; x.fillRect(xp, y, PC, rh); }
+      if (k === lk) { x.fillStyle = 'rgba(90,176,255,.2)'; x.fillRect(xp, y, PC, rh); }
       x.fillStyle = k === lk ? C.tx : C.mut; x.textAlign = 'center'; x.fillText(fp(k), xp + PC / 2, y + rh / 2);
     }
     const [bb, ba] = feed.best(); $('spr').textContent = 'spread ' + ((ba - bb) * sym.tick).toFixed(sym.dec);
