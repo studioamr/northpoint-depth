@@ -805,6 +805,7 @@
   $('flat').onclick = () => { if (sim.pos) simOrder(-Math.sign(sim.pos), Math.abs(sim.pos)); };
   $('sSL').onclick = () => { sim.sl = null; dirty = true; }; $('sTP').onclick = () => { sim.tp = null; dirty = true; };
   $('trkB').onclick = () => toggle('trkP', showTrk);
+  if (/Electron/.test(navigator.userAgent)) $('dlMac').remove(); // dentro de la app de escritorio no hace falta
   $('usr').textContent = ses.name.split(' ')[0] + ' · Salir';
   $('usr').onclick = () => { NPAuth.logout(); location.href = 'index.html'; };
   wire('fp', 'fp'); wire('hm', 'hm');
