@@ -248,9 +248,9 @@ footer{border-top:1px solid var(--line);padding:56px 0 46px;font:400 14px var(--
    pago = el enlace de compra de ese plan en Whop (https://whop.com/...). Vacío = el botón lleva a crear cuenta.
    Al pagar, Whop entrega la clave de licencia que se pega al entrar a la plataforma. */
 const PLANES = [
-  { id: 'mensual', nombre: 'MENSUAL', mes: 29, cada: 'Se cobra cada mes', pago: '' },
-  { id: 'anual', nombre: 'ANUAL', mes: 19, cada: 'Se cobran $228 al año', ahorro: 'Ahorras 34%', hot: 1, pago: '' },
-  { id: 'trimestral', nombre: 'TRIMESTRAL', mes: 25, cada: 'Se cobran $75 cada 3 meses', ahorro: 'Ahorras 14%', pago: '' }
+  { id: 'mensual', nombre: 'MENSUAL', mes: 29, cada: 'Se cobra cada mes', pago: 'https://whop.com/checkout/plan_XcZJJMudkAZ41/' },
+  { id: 'anual', nombre: 'ANUAL', mes: 19, cada: 'Se cobran $228 al año', ahorro: 'Ahorras 34%', hot: 1, pago: 'https://whop.com/checkout/plan_gnlsGykkcw0Iw/' },
+  { id: 'trimestral', nombre: 'TRIMESTRAL', mes: 25, cada: 'Se cobran $75 cada 3 meses', ahorro: 'Ahorras 14%', pago: 'https://whop.com/checkout/plan_8uEqh4fWTABID/' }
 ];
 const INCLUYE = ['Cripto, índices, materias primas y acciones', 'Clusters, trades grandes y liquidez', 'Replay, terminal simulada e historial', 'App para Mac y versión de navegador'];
 const $ = id => document.getElementById(id);
