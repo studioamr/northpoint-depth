@@ -3,209 +3,172 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>NORTHPOINT DEPTH · Order flow tick a tick</title>
-<meta name="description" content="Footprint, heatmap de liquidez, libro de órdenes y replay sobre datos tick a tick reales, auditados contra el exchange minuto a minuto.">
+<title>NORTHPOINT DEPTH · Suscripción</title>
+<meta name="description" content="Order flow tick a tick para cripto: gráfico de clusters, liquidez del libro, replay y terminal simulada. Suscripción mensual.">
 <style>
 :root{--bg:#05070a;--card:rgba(255,255,255,.035);--line:rgba(255,255,255,.08);--tx:#e8ecf3;--mut:#8791a1;--ac:#7aa2ff;--up:#3ddc97;--dn:#ff5c70;
   --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;--sans:Inter,-apple-system,"Helvetica Neue",sans-serif}
 *{box-sizing:border-box}html{scroll-behavior:smooth}
 body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.55 var(--sans);-webkit-font-smoothing:antialiased;overflow-x:hidden}
 a{color:inherit;text-decoration:none}
-.w{max-width:1180px;margin:0 auto;padding:0 20px}
+.w{max-width:1120px;margin:0 auto;padding:0 20px}
 nav{position:sticky;top:0;z-index:20;backdrop-filter:blur(14px);background:rgba(5,7,10,.72);border-bottom:1px solid var(--line)}
 nav .w{display:flex;align-items:center;gap:26px;height:60px}
 .logo{font-weight:700;letter-spacing:.16em;font-size:13px;white-space:nowrap}.logo b{color:var(--ac)}
 nav .lk{display:flex;gap:22px;font-size:14px;color:var(--mut)}nav .lk a:hover{color:var(--tx)}
 .sp{flex:1}
-.btn{display:inline-flex;align-items:center;gap:8px;font:600 14px var(--sans);padding:10px 18px;border-radius:11px;border:1px solid var(--line);background:var(--card);cursor:pointer;color:var(--tx);white-space:nowrap}
+.in{font-size:14px;color:var(--mut)}.in:hover{color:var(--tx)}
+.btn{display:inline-flex;align-items:center;gap:8px;font:600 14px var(--sans);padding:11px 20px;border-radius:11px;border:1px solid var(--line);background:var(--card);cursor:pointer;color:var(--tx);white-space:nowrap}
 .btn:hover{border-color:rgba(255,255,255,.22)}
 .btn.p{background:var(--ac);border-color:var(--ac);color:#05070a}.btn.p:hover{filter:brightness(1.08)}
-.hero{position:relative;text-align:center;padding:96px 0 56px}
-.hero:before{content:"";position:absolute;inset:-60px 0 auto;height:620px;background:radial-gradient(620px 340px at 50% 30%,rgba(122,162,255,.2),transparent 70%);pointer-events:none}
-.eye{display:inline-flex;align-items:center;gap:8px;font:12px var(--mono);color:var(--mut);border:1px solid var(--line);border-radius:99px;padding:6px 12px;background:var(--card)}
-.eye i{width:6px;height:6px;border-radius:50%;background:var(--up);box-shadow:0 0 0 4px rgba(61,220,151,.15)}
-h1{font-size:clamp(38px,6.4vw,76px);line-height:1.02;letter-spacing:-.035em;margin:22px auto 18px;max-width:900px;font-weight:700;text-wrap:balance}
+.btn.lg{font-size:16px;padding:14px 26px;border-radius:13px}
+.btn svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.hero{position:relative;text-align:center;padding:104px 0 84px}
+.hero:before{content:"";position:absolute;inset:-60px 0 auto;height:640px;background:radial-gradient(620px 340px at 50% 28%,rgba(122,162,255,.2),transparent 70%);pointer-events:none}
+.eye{display:inline-flex;align-items:center;gap:8px;font:12px var(--mono);color:var(--mut);border:1px solid var(--line);border-radius:99px;padding:6px 12px;background:var(--card);position:relative}
+h1{font-size:clamp(38px,6.4vw,76px);line-height:1.02;letter-spacing:-.035em;margin:22px auto 18px;max-width:900px;font-weight:700;text-wrap:balance;position:relative}
 h1 em{font-style:normal;color:var(--ac)}
-.sub{color:var(--mut);font-size:clamp(16px,1.7vw,19px);max-width:640px;margin:0 auto 30px;text-wrap:pretty}
+.sub{color:var(--mut);font-size:clamp(16px,1.7vw,19px);max-width:620px;margin:0 auto 30px;text-wrap:pretty;position:relative}
 .cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;position:relative}
 .fine{font-size:13px;color:var(--mut);margin:16px 0 0;position:relative}
 .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:16px;overflow:hidden;margin:64px auto 0;max-width:900px;position:relative}
 .stats div{background:#080b10;padding:20px 12px}
 .stats b{display:block;font:600 26px var(--mono);letter-spacing:-.02em}.stats span{font-size:13px;color:var(--mut)}
-section{padding:84px 0}
+section{padding:80px 0}
 .tag{display:inline-flex;align-items:center;gap:9px;font-size:13px;font-weight:600;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:7px 12px}
 .tag svg{width:16px;height:16px;stroke:var(--ac);fill:none;stroke-width:1.8}
 h2{font-size:clamp(28px,3.8vw,46px);line-height:1.08;letter-spacing:-.03em;margin:18px 0 12px;font-weight:700;text-wrap:balance}
-.lead{color:var(--mut);max-width:620px;margin:0 0 34px}
-.c{text-align:center}.c .lead{margin-left:auto;margin-right:auto}
-.tabs{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:18px}
-.tabs button{font:600 13px var(--sans);color:var(--mut);background:none;border:1px solid transparent;border-radius:10px;padding:8px 14px;cursor:pointer}
-.tabs button.on{color:var(--tx);background:var(--card);border-color:var(--line)}
-.frame{border:1px solid var(--line);border-radius:16px;overflow:hidden;background:#07090d;box-shadow:0 40px 120px rgba(0,0,0,.6),0 0 0 1px rgba(122,162,255,.06)}
-.bar{display:flex;align-items:center;gap:7px;padding:10px 14px;border-bottom:1px solid var(--line)}
-.bar i{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.14)}
-.bar span{margin:0 auto;font:11px var(--mono);color:var(--mut);background:var(--card);border-radius:7px;padding:3px 14px}
-.frame iframe{display:block;width:100%;height:600px;border:0;background:#05070a}
-.note{font:12px var(--mono);color:var(--mut);margin-top:14px;text-align:center}
-.two{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center}
-.two.r .art{order:2}
-.art{border:1px solid var(--line);border-radius:16px;background:linear-gradient(180deg,rgba(122,162,255,.05),transparent);padding:22px;font:12px var(--mono)}
-.fp{display:grid;grid-template-columns:1fr 1fr;gap:2px;max-width:300px;margin:0 auto}
-.fp div{padding:5px 10px;border-radius:3px;background:rgba(255,255,255,.04);color:rgba(232,236,243,.7)}
-.fp div:nth-child(odd){text-align:right}
-.fp .a{background:rgba(61,220,151,.16);color:#86f3c2;font-weight:700}.fp .b{background:rgba(255,92,112,.16);color:#ff97a4;font-weight:700}
-.fp .poc{outline:1px solid var(--ac)}
-ul.k{list-style:none;padding:0;margin:0;display:grid;gap:10px;color:var(--mut);font-size:15px}
-ul.k li{padding-left:22px;position:relative}ul.k li:before{content:"";position:absolute;left:0;top:10px;width:10px;height:2px;background:var(--ac)}
-ul.k b{color:var(--tx);font-weight:600}
-.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.lead{color:var(--mut);max-width:620px;margin:0 auto 34px}
+.c{text-align:center}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;text-align:left}
 .cd{border:1px solid var(--line);border-radius:16px;background:var(--card);padding:22px;display:flex;flex-direction:column;gap:8px}
 .cd h3{margin:0;font-size:17px;letter-spacing:-.01em}.cd p{margin:0;color:var(--mut);font-size:14px}
 .cd svg{width:22px;height:22px;stroke:var(--ac);fill:none;stroke-width:1.6;margin-bottom:6px}
-.bd{align-self:flex-start;font:10px var(--mono);letter-spacing:.08em;border-radius:99px;padding:3px 9px;margin-top:auto}
-.bd.on{color:var(--up);background:rgba(61,220,151,.1)}.bd.wip{color:var(--mut);background:rgba(255,255,255,.06)}
-.mq{overflow:hidden;mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent);-webkit-mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent)}
-.mq div{display:flex;gap:12px;width:max-content;animation:mq 40s linear infinite}
-.mq span{font:600 14px var(--sans);border:1px solid var(--line);background:var(--card);border-radius:12px;padding:12px 20px;white-space:nowrap}
-@keyframes mq{to{transform:translateX(-50%)}}
-@media(prefers-reduced-motion:reduce){.mq div{animation:none}}
-.feeds{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.plan{max-width:460px;margin:0 auto;text-align:left;border:1px solid rgba(122,162,255,.35);border-radius:22px;padding:34px;background:radial-gradient(420px 220px at 50% 0,rgba(122,162,255,.16),transparent 70%),var(--card)}
+.plan small{font:600 11px var(--sans);letter-spacing:.16em;color:var(--ac)}
+.price{font:700 54px var(--sans);letter-spacing:-.04em;margin:10px 0 4px;line-height:1}
+.price span{font:500 16px var(--sans);letter-spacing:0;color:var(--mut);margin-left:6px}
+.price.ask{font-size:30px;letter-spacing:-.02em}
+.plan ul{list-style:none;padding:0;margin:22px 0 26px;display:grid;gap:11px;font-size:15px}
+.plan li{padding-left:28px;position:relative}
+.plan li:before{content:"";position:absolute;left:2px;top:6px;width:13px;height:7px;border-left:2px solid var(--up);border-bottom:2px solid var(--up);transform:rotate(-45deg)}
+.plan .btn{width:100%;justify-content:center}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;text-align:left;counter-reset:s}
+.steps .cd{counter-increment:s}.steps .cd:before{content:"0" counter(s);font:600 13px var(--mono);color:var(--ac)}
+.faq{max-width:760px;margin:0 auto;text-align:left}
+details{border-bottom:1px solid var(--line);padding:18px 0}
+summary{cursor:pointer;font-weight:600;font-size:17px;list-style:none;display:flex;justify-content:space-between;gap:16px}
+summary::-webkit-details-marker{display:none}
+summary:after{content:"+";color:var(--mut);font-weight:400}details[open] summary:after{content:"–"}
+details p{color:var(--mut);margin:10px 0 0;font-size:15px}
 .end{text-align:center;border:1px solid var(--line);border-radius:22px;padding:64px 20px;background:radial-gradient(520px 240px at 50% 0,rgba(122,162,255,.16),transparent 70%),var(--card)}
 footer{border-top:1px solid var(--line);padding:34px 0 50px;color:var(--mut);font-size:12.5px}
 footer .w{display:grid;gap:14px}footer p{margin:0;max-width:860px}
-@media(max-width:860px){nav .lk{display:none}.two{grid-template-columns:1fr;gap:26px}.two.r .art{order:0}.grid{grid-template-columns:1fr}.feeds{grid-template-columns:1fr}.stats{grid-template-columns:1fr 1fr}.frame iframe{height:440px}section{padding:60px 0}.hero{padding-top:64px}}
+@media(max-width:860px){nav .lk{display:none}.grid,.steps{grid-template-columns:1fr}.stats{grid-template-columns:1fr 1fr}section{padding:58px 0}.hero{padding:64px 0 56px}.plan{padding:26px}.price{font-size:44px}}
 </style>
 </head>
 <body>
 <nav><div class="w">
   <a class="logo" href="#">NORTHPOINT <b>DEPTH</b></a>
-  <div class="lk"><a href="#vivo">Plataforma</a><a href="#flujo">Order flow</a><a href="#herramientas">Herramientas</a><a href="#datos">Datos</a><a href="#descarga">Descarga</a></div>
+  <div class="lk"><a href="#incluye">Qué incluye</a><a href="#precio">Precio</a><a href="#como">Cómo funciona</a><a href="#preguntas">Preguntas</a></div>
   <div class="sp"></div>
-  <a class="btn" href="login.html">Abrir en el navegador</a>
-  <a class="btn p" href="#descarga">Descargar</a>
+  <a class="in" href="login.html">Entrar</a>
+  <a class="btn p" data-wa href="#precio">Suscribirme</a>
 </div></nav>
 
 <header class="hero"><div class="w">
-  <span class="eye"><i></i>Datos reales corriendo ahora mismo en esta página</span>
+  <span class="eye">Order flow tick a tick · cripto</span>
   <h1>Mira lo que las velas <em>no enseñan</em></h1>
-  <p class="sub">Cada trade con su agresor real, el libro completo en el tiempo y miles de velas de historia. En una app para tu escritorio o directo en el navegador.</p>
-  <div class="cta"><a class="btn p" href="https://github.com/studioamr/northpoint-depth/releases/latest/download/NORTHPOINT-DEPTH-mac-arm64.dmg"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg> Descargar para Mac</a><a class="btn" href="#vivo">Verlo en vivo</a></div>
-  <p class="fine">Mac con chip Apple · también corre en el navegador, sin instalar nada</p>
+  <p class="sub">Quién compra, quién vende y dónde está la liquidez, trade por trade. Una suscripción, todo incluido.</p>
+  <div class="cta"><a class="btn p lg" data-wa href="#precio"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 0 1-11.800 7L4 20l1.100-4A8 8 0 1 1 20 12z"/></svg>Suscribirme por WhatsApp</a><a class="btn lg" href="#incluye">Ver qué incluye</a></div>
+  <p class="fine">App para Mac y versión de navegador incluidas</p>
   <div class="stats">
-    <div><b>3,000</b><span>velas de historia</span></div>
     <div><b>60</b><span>mercados cripto</span></div>
+    <div><b>3,000</b><span>velas de historia</span></div>
     <div><b>500 ms</b><span>foto del libro</span></div>
     <div><b>0</b><span>trades estimados</span></div>
   </div>
 </div></header>
 
-<section id="vivo"><div class="w c">
-  <span class="tag"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Detrás de las velas</span>
-  <h2>La plataforma, funcionando aquí mismo</h2>
-  <p class="lead">No es un video ni una captura. Es la plataforma real conectada al mercado: muévela, haz zoom, cambia de vista.</p>
-  <div class="tabs" id="tabs"><button class="on" data-v="fp">Gráfico de clusters</button><button data-v="hm">Heatmap de liquidez</button></div>
-  <div class="frame"><div class="bar"><i></i><i></i><i></i><span>northpoint depth · BTCUSDT · en vivo</span></div>
-    <iframe id="demo" src="app.html?demo=1" title="NORTHPOINT DEPTH en vivo" loading="lazy"></iframe></div>
-  <p class="note">Rueda = zoom (de velas a números) · Shift + rueda = zoom en el precio · arrastra para moverte · doble clic = volver a seguir el precio</p>
-</div></section>
-
-<section id="flujo"><div class="w">
-  <div class="two">
-    <div><span class="tag"><svg viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>Footprint</span>
-      <h2>Quién pegó, a qué precio y con cuánto</h2>
-      <p class="lead">Cada vela abierta por dentro: lo vendido al bid y lo comprado al ask en cada nivel de precio.</p>
-      <ul class="k"><li><b>Desbalances diagonales</b> al 200, 300 o 400 %, y marcados cuando se apilan tres o más.</li><li><b>POC y área de valor</b> de cada barra y de toda la sesión cargada.</li><li><b>Delta y CVD</b> exactos, porque el lado agresor viene del exchange en cada trade.</li></ul></div>
-    <div class="art"><div class="fp">
-      <div>1.40</div><div class="a">9.62</div><div>3.55</div><div class="a">14.3</div><div class="poc">9.01</div><div class="poc a">31.7</div>
-      <div>5.27</div><div>4.93</div><div class="b">18.7</div><div>2.03</div><div class="b">22.4</div><div>1.71</div><div>2.26</div><div>0.56</div>
-    </div></div>
+<section id="incluye"><div class="w c">
+  <span class="tag"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Qué incluye</span>
+  <h2>Todo lo que necesitas para leer el flujo</h2>
+  <p class="lead">Datos reales con el lado agresor de cada trade. Nada se estima a partir de la vela.</p>
+  <div class="grid">
+    <div class="cd"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="8" height="5"/><rect x="13" y="4" width="8" height="5"/><rect x="3" y="11" width="8" height="5"/><rect x="13" y="11" width="8" height="5"/></svg><h3>Gráfico de clusters</h3><p>Lo vendido al bid y lo comprado al ask en cada nivel de precio, en cuatro modos: Bid x Ask, Delta, Volumen y Perfil.</p></div>
+    <div class="cd"><svg viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg><h3>Desbalances y absorción</h3><p>Desbalances diagonales resaltados y zonas apiladas que se extienden hasta que el precio las cruza.</p></div>
+    <div class="cd"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5"/></svg><h3>Liquidez del libro</h3><p>Dónde están las órdenes en reposo, cuánto duran y si las retiran antes de que el precio llegue.</p></div>
+    <div class="cd"><svg viewBox="0 0 24 24"><path d="M6 4v16M6 8h3v6H6M15 2v20M15 6h3v9h-3"/></svg><h3>Historia profunda</h3><p>3,000 velas de 1 minuto a 4 horas, más la historia tick a tick que se sigue cargando mientras trabajas.</p></div>
+    <div class="cd"><svg viewBox="0 0 24 24"><path d="M3 5h18M3 10h18M3 15h18M3 20h18M9 5v15M15 5v15"/></svg><h3>Estadística por barra</h3><p>Volumen, delta, delta %, extremos del delta y número de trades bajo cada vela.</p></div>
+    <div class="cd"><svg viewBox="0 0 24 24"><path d="M3 17c4-9 6 3 9-4s5-4 9-7"/><path d="M3 21h18"/></svg><h3>Indicadores y dibujos</h3><p>VWAP con bandas, medias, niveles de ayer, perfil de volumen, líneas, zonas y una regla que mide volumen y delta.</p></div>
+    <div class="cd"><svg viewBox="0 0 24 24"><path d="M5 4v16l14-8z"/></svg><h3>Replay tick por tick</h3><p>Vuelve a pasar la sesión de 1x a 300x y practica sobre ella como si estuviera en vivo.</p></div>
+    <div class="cd"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg><h3>Terminal simulada</h3><p>Compra y vende sin arriesgar dinero, con stop y objetivo arrastrables sobre el gráfico.</p></div>
+    <div class="cd"><svg viewBox="0 0 24 24"><path d="M3 17l5-5 4 3 8-9"/><path d="M15 6h5v5"/></svg><h3>Historial automático</h3><p>Cada operación de práctica queda registrada sola, con resultado y porcentaje de aciertos.</p></div>
   </div>
 </div></section>
 
-<section><div class="w">
-  <div class="two r">
-    <div class="art"><svg viewBox="0 0 320 180" style="width:100%;display:block">
-      <rect x="0" y="34" width="320" height="10" fill="rgba(122,162,255,.55)"/><rect x="0" y="62" width="210" height="8" fill="rgba(122,162,255,.25)"/><rect x="60" y="120" width="260" height="12" fill="rgba(122,162,255,.75)"/><rect x="0" y="150" width="320" height="6" fill="rgba(122,162,255,.18)"/>
-      <path d="M0 100 L40 92 L80 104 L120 84 L160 96 L200 70 L240 88 L280 110 L320 118" fill="none" stroke="#e8ecf3" stroke-width="1.2" opacity=".7"/>
-      <circle cx="120" cy="84" r="13" fill="rgba(61,220,151,.4)" stroke="#3ddc97"/><circle cx="200" cy="70" r="6" fill="rgba(61,220,151,.4)" stroke="#3ddc97"/><circle cx="280" cy="110" r="18" fill="rgba(255,92,112,.4)" stroke="#ff5c70"/><circle cx="60" cy="98" r="5" fill="rgba(255,92,112,.4)" stroke="#ff5c70"/>
-    </svg></div>
-    <div><span class="tag"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5"/></svg>Heatmap y trades grandes</span>
-      <h2>La liquidez se ve antes de que el precio llegue</h2>
-      <p class="lead">El libro completo fotografiado dos veces por segundo. Las órdenes en reposo aparecen como bandas; las agresivas, como burbujas.</p>
-      <ul class="k"><li><b>Muros de liquidez</b>: dónde están, cuánto duran y si los retiran antes de que el precio los toque.</li><li><b>Trades grandes</b> marcados sobre el gráfico con su tamaño real.</li><li><b>Libro en escalera</b> con el volumen ya negociado en cada precio.</li></ul></div>
+<section id="precio"><div class="w c">
+  <span class="tag"><svg viewBox="0 0 24 24"><path d="M12 3v18M16 7H10a3 3 0 0 0 0 6h4a3 3 0 0 1 0 6H7"/></svg>Precio</span>
+  <h2>Un plan. Todo incluido.</h2>
+  <p class="lead">Sin niveles ni funciones bloqueadas.</p>
+  <div class="plan">
+    <small>SUSCRIPCIÓN MENSUAL</small>
+    <div class="price" id="price"></div>
+    <ul>
+      <li>Los 60 mercados cripto con más volumen</li>
+      <li>Gráfico de clusters, liquidez del libro y estadística</li>
+      <li>Replay, terminal simulada e historial</li>
+      <li>App para Mac y versión de navegador</li>
+      <li>Las mejoras que vayan saliendo</li>
+    </ul>
+    <a class="btn p lg" data-wa href="#"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 0 1-11.800 7L4 20l1.100-4A8 8 0 1 1 20 12z"/></svg>Suscribirme por WhatsApp</a>
   </div>
 </div></section>
 
-<section><div class="w c">
-  <span class="tag"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg>El gráfico</span>
-  <h2>De la vela de 4 horas al número de cada nivel</h2>
-  <p class="lead">Un solo gráfico que se acerca: velas, clusters de color y, hasta el fondo, el bid y el ask de cada precio.</p>
-  <div class="grid" style="text-align:left">
-    <div class="cd"><svg viewBox="0 0 24 24"><path d="M6 4v16M6 8h3v6H6M15 2v20M15 6h3v9h-3"/></svg><h3>Historia profunda</h3><p>3,000 velas en temporalidades de 1 minuto a 4 horas, y la historia tick a tick que se sigue cargando hacia atrás mientras trabajas.</p></div>
-    <div class="cd"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="8" height="5"/><rect x="13" y="4" width="8" height="5"/><rect x="3" y="11" width="8" height="5"/><rect x="13" y="11" width="8" height="5"/></svg><h3>Cuatro modos de cluster</h3><p>Bid x Ask, Delta, Volumen o Perfil. Y barras por tiempo, ticks, volumen, delta o rango.</p></div>
-    <div class="cd"><svg viewBox="0 0 24 24"><path d="M3 5h18M3 10h18M3 15h18M3 20h18M9 5v15M15 5v15"/></svg><h3>Estadística por barra</h3><p>Volumen, delta, delta %, máximo y mínimo del delta y número de trades, en una tabla bajo cada vela.</p></div>
-    <div class="cd"><svg viewBox="0 0 24 24"><path d="M3 17c4-9 6 3 9-4s5-4 9-7"/><path d="M3 21h18"/></svg><h3>Indicadores</h3><p>VWAP del día con bandas, medias, niveles de ayer, perfil de volumen y zonas de desbalance que se extienden hasta que el precio las cruza.</p></div>
-    <div class="cd"><svg viewBox="0 0 24 24"><path d="M4 16L16 4l4 4L8 20z"/><path d="M8 12l2 2M11 9l2 2M14 6l2 2"/></svg><h3>Dibujos y regla</h3><p>Líneas, tendencias y zonas que se guardan por mercado. La regla mide precio, porcentaje, barras y el volumen y delta del tramo.</p></div>
-    <div class="cd"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5"/></svg><h3>Liquidez detrás de las velas</h3><p>El libro en el tiempo como fondo del gráfico, con los trades grandes marcados encima.</p></div>
+<section id="como"><div class="w c">
+  <span class="tag"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>Cómo funciona</span>
+  <h2>Dentro en tres pasos</h2>
+  <p class="lead">Sin formularios largos.</p>
+  <div class="steps">
+    <div class="cd"><h3>Escríbenos</h3><p>Toca "Suscribirme" y se abre WhatsApp con el mensaje ya escrito.</p></div>
+    <div class="cd"><h3>Activa tu suscripción</h3><p>Te pasamos la forma de pago y, al confirmarlo, tu acceso.</p></div>
+    <div class="cd"><h3>Entra</h3><p>Descarga la app para Mac o abre la versión de navegador con tu cuenta.</p></div>
   </div>
 </div></section>
 
-<section id="herramientas"><div class="w c">
-  <span class="tag"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Todo en un lugar</span>
-  <h2>Analiza, practica y lleva tu registro</h2>
-  <p class="lead">Cada herramienta dice en qué estado está. Lo que marca "Disponible" ya funciona al entrar.</p>
-  <div class="grid" style="text-align:left">
-    <div class="cd"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg><h3>Terminal simulada</h3><p>Compra, vende y cierra con un clic. Se llena al bid o al ask reales del momento, sin arriesgar dinero.</p><span class="bd on">DISPONIBLE</span></div>
-    <div class="cd"><svg viewBox="0 0 24 24"><path d="M3 17l5-5 4 3 8-9"/><path d="M15 6h5v5"/></svg><h3>Historial automático</h3><p>Cada operación queda registrada sola: entrada, salida, resultado y porcentaje de aciertos.</p><span class="bd on">DISPONIBLE</span></div>
-    <div class="cd"><svg viewBox="0 0 24 24"><path d="M5 4v16l14-8z"/></svg><h3>Replay tick por tick</h3><p>Vuelve a pasar la sesión a 1x o hasta 300x y opera sobre ella como si estuviera en vivo.</p><span class="bd on">DISPONIBLE</span></div>
-    <div class="cd"><svg viewBox="0 0 24 24"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.500-1-8-4-8-9V7z"/><path d="M9 12l2 2 4-4"/></svg><h3>Auditoría de precisión</h3><p>Cada trade trae un número consecutivo: si faltara uno, se nota y se recupera. Además se compara tu volumen contra la vela oficial.</p><span class="bd on">DISPONIBLE</span></div>
-    <div class="cd"><svg viewBox="0 0 24 24"><path d="M4 12h16M12 4v16"/><circle cx="12" cy="12" r="9"/></svg><h3>Órdenes reales en el gráfico</h3><p>En simulado ya puedes arrastrar el stop y el objetivo sobre el gráfico. Falta enviarlos a un bróker real.</p><span class="bd wip">EN DESARROLLO</span></div>
-    <div class="cd"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="8" height="14" rx="2"/><rect x="13" y="5" width="8" height="14" rx="2"/></svg><h3>Copiador de cuentas</h3><p>Una ejecución replicada en todas tus cuentas conectadas. Depende de la conexión con el bróker.</p><span class="bd wip">EN DESARROLLO</span></div>
+<section id="preguntas"><div class="w c">
+  <span class="tag"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.500 9.500a2.500 2.500 0 1 1 3.500 2.300c-.700.400-1 .900-1 1.700M12 17h.01"/></svg>Preguntas</span>
+  <h2>Antes de suscribirte</h2>
+  <div class="faq" style="margin-top:26px">
+    <details><summary>¿En qué equipos funciona?</summary><p>En Mac con chip Apple (M1 en adelante) con la app de escritorio, y en cualquier computadora desde el navegador. El instalador para Windows está en desarrollo.</p></details>
+    <details><summary>¿Qué mercados trae?</summary><p>Los 60 contratos perpetuos en USDT con más volumen de Binance Futures: BTC, ETH, SOL y el resto.</p></details>
+    <details><summary>¿Sirve para futuros como NQ o ES?</summary><p>Todavía no. Hoy es solo cripto.</p></details>
+    <details><summary>¿Puedo operar con dinero real desde la plataforma?</summary><p>No. La terminal es simulada: sirve para practicar y medir tu ejecución, pero no envía órdenes al mercado.</p></details>
+    <details><summary>¿Incluye señales o recomendaciones?</summary><p>No. Es una herramienta de análisis: te muestra los datos, la decisión es tuya.</p></details>
   </div>
-</div></section>
-
-<section style="padding-top:0"><div class="w c"><p class="lead" style="margin-bottom:22px">Lo que ya trae el gráfico</p></div>
-  <div class="mq"><div id="mq"></div></div></section>
-
-<section id="datos"><div class="w">
-  <span class="tag"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v6c0 1.700 3.600 3 8 3s8-1.300 8-3V6M4 12v6c0 1.700 3.600 3 8 3s8-1.300 8-3v-6"/></svg>Datos</span>
-  <h2>La precisión viene del feed</h2>
-  <p class="lead">Un gráfico de order flow vale lo que vale su fuente. Por eso cada conexión dice exactamente qué entrega.</p>
-  <div class="feeds">
-    <div class="cd"><h3>Binance Futures · cripto</h3><p>Los 60 perpetuos USDT con más volumen, tick a tick, con agresor real y libro completo. Los huecos de secuencia se detectan y se recuperan solos.</p><span class="bd on">EN VIVO</span></div>
-    <div class="cd"><h3>Futuros CME · NQ, MNQ, ES</h3><p>El mismo motor sirve para futuros. Se activa cuando haya un feed de CME conectado; hoy no hay ninguno.</p><span class="bd wip">MÁS ADELANTE</span></div>
-  </div>
-</div></section>
-
-<section id="descarga"><div class="w c">
-  <span class="tag"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg>Descarga</span>
-  <h2>Llévatela a tu escritorio</h2>
-  <p class="lead">La misma plataforma, en su propia ventana y sin pestañas alrededor.</p>
-  <div class="grid" style="text-align:left">
-    <div class="cd"><h3>Mac</h3><p>Para Mac con chip Apple (M1 en adelante).</p><a class="btn p" style="margin-top:10px;align-self:flex-start" href="https://github.com/studioamr/northpoint-depth/releases/latest/download/NORTHPOINT-DEPTH-mac-arm64.dmg">Descargar .dmg</a><span class="bd on">DISPONIBLE</span></div>
-    <div class="cd"><h3>Navegador</h3><p>Sin instalar nada. Funciona en Chrome, Safari y Edge de escritorio.</p><a class="btn" style="margin-top:10px;align-self:flex-start" href="login.html">Abrir plataforma</a><span class="bd on">DISPONIBLE</span></div>
-    <div class="cd"><h3>Windows</h3><p>El instalador para Windows todavía no está listo. Mientras, usa la versión de navegador.</p><span class="bd wip">EN DESARROLLO</span></div>
-  </div>
-  <p class="note" style="max-width:720px;margin:18px auto 0;line-height:1.6">Primera vez en Mac: la app aún no está firmada con Apple, así que macOS pedirá confirmación. Abre el .dmg, arrastra la app a Aplicaciones, y la primera vez ábrela con clic derecho &rarr; Abrir (o en Ajustes del Sistema &rarr; Privacidad y seguridad &rarr; "Abrir de todos modos").</p>
 </div></section>
 
 <section style="padding-top:20px"><div class="w"><div class="end">
   <h2 style="margin-top:0">Abre el mercado por dentro</h2>
-  <p class="lead" style="margin:0 auto 26px">Descárgala o ábrela en el navegador; en menos de un minuto estás dentro.</p>
-  <div class="cta"><a class="btn p" href="#descarga">Descargar</a><a class="btn" href="login.html">Abrir en el navegador</a></div>
+  <p class="lead" style="margin:0 auto 26px">Un mensaje y empezamos.</p>
+  <div class="cta"><a class="btn p lg" data-wa href="#precio"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 0 1-11.800 7L4 20l1.100-4A8 8 0 1 1 20 12z"/></svg>Suscribirme por WhatsApp</a></div>
 </div></div></section>
 
 <footer><div class="w">
   <div class="logo">NORTHPOINT <b>DEPTH</b></div>
-  <p>Aviso de riesgo: operar futuros, divisas y criptomonedas implica un riesgo considerable y no es adecuado para todas las personas. Usa solo capital que puedas permitirte perder. Esta plataforma es una herramienta de análisis; nada de lo que muestra es una recomendación de inversión. La terminal incluida es simulada y no envía órdenes al mercado.</p>
-  <p>NorthPoint &copy; 2026</p>
+  <p>Aviso de riesgo: operar futuros y criptomonedas implica un riesgo considerable y no es adecuado para todas las personas. Usa solo capital que puedas permitirte perder. Esta plataforma es una herramienta de análisis; nada de lo que muestra es una recomendación de inversión. La terminal incluida es simulada y no envía órdenes al mercado.</p>
+  <p>NorthPoint &copy; 2026 · <a href="login.html" style="text-decoration:underline">Entrar a mi cuenta</a></p>
 </div></footer>
 <script>
-const names=['Footprint bid × ask','Delta por barra','CVD','Perfil de volumen','Área de valor','POC','VWAP','Desbalance diagonal','Desbalances apilados','Trades grandes','Heatmap de liquidez','Libro en escalera','Cinta filtrada','Barras por ticks','Barras por volumen','Barras de rango'];
-document.getElementById('mq').innerHTML=names.concat(names).map(n=>'<span>'+n+'</span>').join('');
-document.getElementById('tabs').onclick=e=>{const b=e.target.closest('button');if(!b)return;
-  for(const q of e.currentTarget.children)q.classList.toggle('on',q===b);
-  document.getElementById('demo').contentWindow.postMessage({np:'view',v:b.dataset.v},location.origin)};
+/* ====== LO ÚNICO QUE HAY QUE LLENAR ======
+   precio:   la cifra al mes, por ejemplo '39'. Vacío = la tarjeta dice "Pide tu precio por WhatsApp".
+   moneda:   'USD' o 'MXN'.
+   whatsapp: número con lada de país, solo dígitos (52 + 10 dígitos en México). */
+const CONFIG = { precio: '', moneda: 'USD', whatsapp: '524434405815' };
+const msg = encodeURIComponent('Hola, quiero suscribirme a NORTHPOINT DEPTH.');
+document.getElementById('price').innerHTML = CONFIG.precio ? '$' + CONFIG.precio + '<span>' + CONFIG.moneda + ' al mes</span>' : '';
+if (!CONFIG.precio) { const p = document.getElementById('price'); p.className = 'price ask'; p.textContent = 'Pide tu precio por WhatsApp'; }
+if (CONFIG.whatsapp) for (const a of document.querySelectorAll('[data-wa]')) { a.href = 'https://wa.me/' + CONFIG.whatsapp + '?text=' + msg; a.target = '_blank'; a.rel = 'noopener'; }
 </script>
 </body>
 </html>
