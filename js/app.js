@@ -38,7 +38,7 @@
       const t = T.get(s.symbol); if (!t || !(+t.lastPrice > 0) || !(+t.volume > 0)) continue;
       const pf = s.filters.find(f => f.filterType === 'PRICE_FILTER'), lf = s.filters.find(f => f.filterType === 'LOT_SIZE');
       const tick = +pf.tickSize, g0 = niceI(+t.lastPrice * 0.00015 / tick), m = +t.volume / 1440, big = nice(m / 20);
-      out.push({ id: s.symbol, cat, name: ETF[base] || MAT[base] || '', tick, dec: decs(pf.tickSize), qd: Math.min(3, decs(lf.stepSize)), g0,
+      out.push({ id: s.symbol, step: +lf.stepSize, minQ: +lf.minQty, cat, name: ETF[base] || MAT[base] || '', tick, dec: decs(pf.tickSize), qd: Math.min(3, decs(lf.stepSize)), g0,
         groups: [...new Set([0.1, 0.5, 1, 2.5, 5].map(k => Math.max(1, Math.round(g0 * k))))], hg: Math.max(1, Math.round(g0 / 10)),
         volBar: nice(m), dBar: nice(m / 4), rng: g0 * 5, tape: [nice(big / 10), nice(big / 4), big, nice(big * 2)], minImb: nice(m / 200), big,
         q0: Math.max(+lf.stepSize, nice(m / 1000)), qv: +t.quoteVolume });
@@ -51,7 +51,7 @@
 
   /* ---------- ajustes guardados por usuario ---------- */
   const CK = 'npd.cfg2.' + ses.email;
-  const IND0 = { prof: 1, vwap: 1, bands: 0, ema1: 0, ema2: 0, big: 1, imb: 1, zones: 1, poc: 1, heat: 0, stats: 1, day: 1, liq: 1 };
+  const IND0 = { prof: 1, vwap: 1, bands: 0, ema1: 0, ema2: 0, big: 1, imb: 1, zones: 1, poc: 1, heat: 0, stats: 1, day: 1, liq: 1, sess: 0, ice: 1, cvds: 0, cal: 1 };
   const cfg = { sym: 'BTCUSDT', bar: 'time:60000', mode: 'ba', imb: '3', dep: '2', e1: 20, e2: 50, srch: 0, bigX: 2, alSnd: 1, alBig: 0, ind: Object.assign({}, IND0) };
   try { const s = JSON.parse(localStorage.getItem(CK)); if (s && !DEMO) { Object.assign(cfg, s); cfg.ind = Object.assign({}, IND0, s.ind); } } catch (e) {}
   const saveCfg = () => { if (DEMO) return; try { localStorage.setItem(CK, JSON.stringify(cfg)); } catch (e) {} };
@@ -66,7 +66,8 @@
   let hist = [], histTok = 0, day = null;                 // velas históricas del exchange y niveles del día
   let D = [], tool = 'cur', draft = null, ruler = null;   // dibujos
   let sim = { pos: 0, avg: 0, real: 0, sl: null, tp: null }, grab = null;
-  let AL = [], alLog = [], lastPx = null, liqs = [];           // alertas de precio y liquidaciones
+  let AL = [], alLog = [], lastPx = null, liqs = [];
+  const HOOK = { trade: [], snap: [], draw: [], low: [], slow: [], closed: [], open: [], can: [], ping: [], mode: null, real: false, reto: null };           // alertas de precio y liquidaciones
   const G = { A: [], nb: 0, xR: 0, ch: 0, cw: 0, rh: 16, g: 1 }; // geometría del último cuadro, para el mouse
   const stat = { cnt: 0, tps: 0, lat: 0 };
   let audit = { rows: [], ok: 0, n: 0 };
@@ -120,6 +121,7 @@
   }
   function onTrade(t, p, q, s, E) {
     live.add(t, p, q, s); stat.cnt++;
+    if (E) for (const f of HOOK.trade) f(t, p, q, s);
     if (!rep && sim.pos) bracket(p);
     if (E) { spdAdd(s, q); checkAlerts(p); }
     if (E) { const l = Math.max(0, Date.now() - skew - E); stat.lat = stat.lat ? stat.lat * 0.9 + l * 0.1 : l; }
@@ -189,6 +191,7 @@
     for (const [k, q] of feed.bids) { const i = Math.floor(k / hg) - base; if (i >= 0 && i < HR) a[i] += q; }
     for (const [k, q] of feed.asks) { const i = Math.floor(k / hg) - base; if (i >= 0 && i < HR) a[i] += q; }
     heat.push({ t: feed.bookT, base, a, bb, ba }); if (heat.length > HMAX) heat.shift();
+    for (const f of HOOK.snap) f(heat[heat.length - 1]);
     const nz = Array.from(a).filter(x => x > 0).sort((x, y) => x - y);
     if (nz.length) { const r = nz[Math.floor(nz.length * 0.97)]; hv.ref = hv.ref === 1 ? r : hv.ref * 0.95 + r * 0.05; }
     dirty = true;
@@ -397,6 +400,7 @@
         hline(x, Y(sim[k] + 0.5), cw, col, [5, 3], nm + ' ' + fp(sim[k]) + '   ' + (pl >= 0 ? '+' : '') + pl.toFixed(2) + (grab === k ? '' : '   arrastra para mover'));
       }
     }
+    for (const f of HOOK.draw) f(x, { Y, X, A, iLo, iHi, nb, cw, ch, rh, g, cells, tNow, xR, barW: v.barW });
     for (const a of AL) { const y = Y(a.p + 0.5); if (y > 0 && y < ch) hline(x, y, cw, '#ffd166', [2, 3], 'ALERTA ' + fp(a.p), true); }
     if (I.liq && liqs.length) { x.strokeStyle = '#ff9a2e'; x.lineWidth = 2; for (const q of liqs) { if (q.t < A[iLo].t0 || q.t > tNow) continue; const a = idxAt(A, q.t); if (a > iHi) continue; const px = X(a) + v.barW / 2, py = Y(q.p + 0.5); x.beginPath(); x.moveTo(px - 5, py - 5); x.lineTo(px + 5, py + 5); x.moveTo(px + 5, py - 5); x.lineTo(px - 5, py + 5); x.stroke(); } }
     for (const d of D) drawD(x, d);
@@ -435,7 +439,7 @@
     }
     x.strokeStyle = C.ac; x.lineWidth = 1.5; x.beginPath();
     for (let i = iLo; i <= iHi; i++) { const px = X(i) + v.barW / 2, py = ch + 6 + (c1 - cv[i]) / ((c1 - c0) || 1) * (dh - 8); i === iLo ? x.moveTo(px, py) : x.lineTo(px, py); }
-    x.stroke(); x.restore();
+    x.stroke(); for (const f of HOOK.low) f(x, { X, A, iLo, iHi, ch, dh, cw, barW: v.barW }); x.restore();
     x.textAlign = 'left'; x.font = '9px ' + MONO; x.fillStyle = C.ac; x.fillText('CVD ' + fs(cv[nb - 1]), cw + 6, ch + 12);
     x.fillStyle = C.mut; x.fillText('DELTA', cw + 6, ch + dh - 6);
     if (statsOn) for (let r = 0; r < 6; r++) x.fillText(ROWS[r], cw + 6, ty0 + r * 14 + 7);
@@ -594,6 +598,7 @@
   function slow() {
     if (!live) return;
     if (PANE) { drawSlowPane(); return; }
+    for (const f of HOOK.slow) try { f(); } catch (e) { console.error(e); }
     if (!$('pBook').hidden) { drawDOM(); drawSpd();
       $('tape').innerHTML = tape.slice(0, 9).map(t => `<div class="r ${t.s ? 'd' : 'u'}"${t.liq ? ' style="color:#ff9a2e"' : ''}><span style="color:var(--mut)">${ft(t.t, 1)}</span><span>${t.liq ? 'LIQ ' : ''}${fp(Math.round(t.pv / t.q))}</span><span>${fv(t.q)}</span></div>`).join(''); }
     drawInfo();
@@ -732,7 +737,7 @@
 
   /* ---------- panel de indicadores ---------- */
   const INDS = [['GRÁFICO'], ['vwap', 'VWAP del día', 'anclado a las 00:00 UTC'], ['bands', 'Bandas del VWAP', '1 y 2 desviaciones'], ['ema1', 'Media exponencial A', '', 'e1'], ['ema2', 'Media exponencial B', '', 'e2'], ['day', 'Niveles de ayer', 'máximo, mínimo, cierre y apertura de hoy'], ['prof', 'Perfil de volumen', 'POC, VAH y VAL de los ticks cargados'],
-    ['ORDER FLOW'], ['imb', 'Desbalances', 'números resaltados'], ['zones', 'Zonas de desbalance apilado', 'se extienden hasta que el precio las cruza'], ['poc', 'POC de cada barra'], ['big', 'Trades grandes', 'órdenes agresoras de gran tamaño'], ['liq', 'Liquidaciones', 'posiciones cerradas a la fuerza por el exchange'], ['heat', 'Liquidez detrás de las velas', 'el libro en el tiempo, como fondo'], ['stats', 'Estadística de clusters', 'tabla por barra debajo del gráfico']];
+    ['ORDER FLOW'], ['imb', 'Desbalances', 'números resaltados'], ['zones', 'Zonas de desbalance apilado', 'se extienden hasta que el precio las cruza'], ['poc', 'POC de cada barra'], ['big', 'Trades grandes', 'órdenes agresoras de gran tamaño'], ['liq', 'Liquidaciones', 'posiciones cerradas a la fuerza por el exchange'], ['ice', 'Icebergs y muros retirados', 'órdenes ocultas que se recargan y muros que se quitan antes de tocarse'], ['cvds', 'CVD de órdenes grandes y chicas', 'en el panel de abajo'], ['sess', 'Perfil por sesión', 'Asia, Londres y Nueva York'], ['cal', 'Datos económicos en el gráfico', 'solo en la app de escritorio'], ['heat', 'Liquidez detrás de las velas', 'el libro en el tiempo, como fondo'], ['stats', 'Estadística de clusters', 'tabla por barra debajo del gráfico']];
   function showInd() {
     $('indP').innerHTML = '<h4>Indicadores</h4>' + INDS.map(r => r.length === 1 ? `<h5>${r[0]}</h5>` :
       `<label><input type="checkbox" data-k="${r[0]}"${cfg.ind[r[0]] ? ' checked' : ''}><span>${r[1]}${r[2] ? `<br><small>${r[2]}</small>` : ''}</span>${r[3] ? `<input type="number" min="2" max="500" data-n="${r[3]}" value="${cfg[r[3]]}">` : ''}</label>`).join('') +
@@ -748,9 +753,9 @@
   /* ---------- REPLAY: vuelve a pasar los trades guardados, tick por tick ---------- */
   function repAdd(to, quiet) { const r = rep; while (r.i < to) { r.eng.add(r.T[r.i], r.P[r.i], r.Q[r.i], r.S[r.i]); if (!quiet && sim.pos) bracket(r.P[r.i]); r.i++; } }
   function repSeek(f) { const r = rep; r.eng.clear(); r.i = 0; repAdd(Math.max(1, Math.floor(r.n * f)), true); r.t = r.T[r.i - 1]; follow(); }
-  function repStart() {
-    if (rep || live.n < 100) return; const n = live.n;
-    rep = { T: live.T.slice(0, n), P: live.P.slice(0, n), Q: live.Q.slice(0, n), S: live.S.slice(0, n), n, i: 0, t: 0, play: true, eng: new Engine(barCfg()) };
+  function repStart(D) {
+    const src = D && D.n ? D : live; if (rep || src.n < 100) return; const n = src.n;
+    rep = { T: src.T.slice(0, n), P: src.P.slice(0, n), Q: src.Q.slice(0, n), S: src.S.slice(0, n), n, i: 0, t: 0, play: true, eng: new Engine(barCfg()) };
     eng = rep.eng; $('rp').style.display = 'flex'; $('rpP').textContent = 'Pausa'; repSeek(0.5);
   }
   function repStop() { if (!rep) return; rep = null; eng = live; $('rp').style.display = 'none'; follow(); }
@@ -774,12 +779,15 @@
   /* stop = orden de mercado al tocarse (se llena al precio del trade que lo tocó, con su deslizamiento);
      objetivo = orden límite (se llena a su precio) */
   function bracket(p) {
-    if (!sim.pos) return; const s = Math.sign(sim.pos), q = Math.abs(sim.pos);
+    if (!sim.pos || HOOK.real) return; const s = Math.sign(sim.pos), q = Math.abs(sim.pos);
     if (sim.sl != null && (s > 0 ? p <= sim.sl : p >= sim.sl)) simOrder(-s, q, p, 'stop');
     else if (sim.tp != null && (s > 0 ? p >= sim.tp : p <= sim.tp)) simOrder(-s, q, sim.tp, 'objetivo');
   }
   function simOrder(side, q, fpx, why) {
-    if (!(q > 0) || eng.last == null) return; let px = eng.last;
+    if (!(q > 0) || eng.last == null) return;
+    if (HOOK.can.some(f => !f(side, q, why))) return;   // reglas de la cuenta
+    if (HOOK.mode && HOOK.mode(side, q, why)) return;   // lo manda el bróker real
+    let px = eng.last;
     if (!rep && feed && feed.bookOk) { const [bb, ba] = feed.best(); px = side > 0 ? ba : bb; } // en vivo: compra al ask, vende al bid
     if (fpx != null) px = fpx;
     let rem = q; const ps = Math.sign(sim.pos);
@@ -787,12 +795,13 @@
       const c = Math.min(Math.abs(sim.pos), rem), pnl = (px - sim.avg) * sym.tick * c * ps; sim.real += pnl;
       trk.unshift({ t: Date.now(), sym: sym.id, side: ps, q: c, a: sim.avg * sym.tick, b: px * sym.tick, pnl, rep: !!rep, tag: why || '' }); trk = trk.slice(0, 200);
       if (!DEMO) try { localStorage.setItem(TK, JSON.stringify(trk)); } catch (e) {}
+      for (const f of HOOK.closed) try { f({ t: Date.now(), sym: sym.id, side: ps, q: c, a: sim.avg * sym.tick, b: px * sym.tick, pnl, mode: rep ? (HOOK.reto ? 'reto' : 'replay') : 'sim', why: why || '' }); } catch (e) { console.error(e); }
       sim.pos = +(sim.pos + side * c).toFixed(8); rem -= c; if (!sim.pos) sim.avg = 0;
     }
     if (rem > 1e-9) { const np = +(sim.pos + side * rem).toFixed(8); sim.avg = (Math.abs(sim.pos) * sim.avg + rem * px) / Math.abs(np); sim.pos = np; }
     /* al abrir o voltear posición: stop a 8 filas y objetivo a 16 (2R); luego se arrastran */
     if (!sim.pos) sim.sl = sim.tp = null;
-    else if (ps !== Math.sign(sim.pos)) { const d = eng.o.group * 8 * Math.sign(sim.pos); sim.sl = Math.round(sim.avg) - d; sim.tp = Math.round(sim.avg) + 2 * d; }
+    else if (ps !== Math.sign(sim.pos)) { const d = eng.o.group * 8 * Math.sign(sim.pos); sim.sl = Math.round(sim.avg) - d; sim.tp = Math.round(sim.avg) + 2 * d; for (const f of HOOK.open) try { f({ side: Math.sign(sim.pos), px: sim.avg * sym.tick }); } catch (e) {} }
     dirty = true; if ($('trkP').style.display === 'block') showTrk();
   }
   function showTrk() {
@@ -805,7 +814,7 @@
   $('flat').onclick = () => { if (sim.pos) simOrder(-Math.sign(sim.pos), Math.abs(sim.pos)); };
   $('sSL').onclick = () => { sim.sl = null; dirty = true; }; $('sTP').onclick = () => { sim.tp = null; dirty = true; };
   $('trkB').onclick = () => toggle('trkP', showTrk);
-  if (/Electron/.test(navigator.userAgent)) $('dlMac').remove(); // dentro de la app de escritorio no hace falta
+  if (/Electron/.test(navigator.userAgent)) { $('dlMac').remove(); $('dlWin').remove(); } // dentro de la app de escritorio no hace falta
   $('usr').textContent = ses.name.split(' ')[0] + ' · Salir';
   $('usr').onclick = () => { NPAuth.logout(); location.href = 'index.html'; };
   wire('fp', 'fp'); wire('hm', 'hm');
@@ -824,6 +833,7 @@
     alLog.unshift({ t: Date.now(), title, body }); alLog = alLog.slice(0, 30);
     const el = document.createElement('div'), b = document.createElement('b'); b.textContent = title; el.appendChild(b); el.appendChild(document.createTextNode(body)); $('toast').appendChild(el); setTimeout(() => el.remove(), 7000);
     if (cfg.alSnd !== 0) beep();
+    for (const f of HOOK.ping) try { f(title, body); } catch (e) {}
     try { if (window.Notification && Notification.permission === 'granted' && document.hidden) new Notification(title, { body }); } catch (e) {}
     showAl();
   }
@@ -905,18 +915,20 @@
   const TPK = 'npd.tpl.' + ses.email; let TPL = {}; try { TPL = JSON.parse(localStorage.getItem(TPK)) || {}; } catch (e) {}
   function tplUI() {
     const s = $('tplSel'); s.innerHTML = ''; const add = (v, t) => { const o = document.createElement('option'); o.value = v; o.textContent = t; s.appendChild(o); };
-    add('', 'Plantillas'); for (const n of Object.keys(TPL)) add('t:' + n, n); add('save', 'Guardar la actual…'); if (Object.keys(TPL).length) add('del', 'Borrar una…');
+    add('', 'Plantillas'); for (const n of Object.keys(TPL)) add('t:' + n, n); add('save', 'Guardar espacio actual…'); if (Object.keys(TPL).length) add('del', 'Borrar una…');
   }
   function tplSave() { try { localStorage.setItem(TPK, JSON.stringify(TPL)); } catch (e) {} tplUI(); }
   $('tplSel').onchange = e => {
     const val = e.target.value; e.target.value = '';
-    if (val === 'save') ask('Nombre de la plantilla', n => { TPL[n] = { bar: cfg.bar, mode: cfg.mode, imb: cfg.imb, e1: cfg.e1, e2: cfg.e2, srch: cfg.srch, bigX: cfg.bigX, ind: Object.assign({}, cfg.ind), w: v.barW }; tplSave(); });
+    if (val === 'save') ask('Nombre de la plantilla', n => { TPL[n] = { sym: sym.id, lay: JSON.parse(JSON.stringify(LAY)), bar: cfg.bar, mode: cfg.mode, imb: cfg.imb, e1: cfg.e1, e2: cfg.e2, srch: cfg.srch, bigX: cfg.bigX, ind: Object.assign({}, cfg.ind), w: v.barW }; tplSave(); });
     else if (val === 'del') ask('Nombre de la plantilla a borrar', n => { delete TPL[n]; tplSave(); });
     else if (val.startsWith('t:')) {
       const t = TPL[val.slice(2)]; if (!t) return;
       Object.assign(cfg, { bar: t.bar, mode: t.mode, imb: t.imb, e1: t.e1, e2: t.e2, srch: t.srch, bigX: t.bigX }); cfg.ind = Object.assign({}, IND0, t.ind);
       for (const [id, k] of [['barSel', 'bar'], ['imbSel', 'imb'], ['modeSel', 'mode']]) if ([...$(id).options].some(o => o.value === cfg[k])) $(id).value = cfg[k];
       v.barW = t.w || 30; v.offX = 0; v.autoY = true; saveCfg(); live.set(barCfg()); loadHist(); zoomUI(); dirty = true;
+      if (t.sym && t.sym !== sym.id) setSym(t.sym);
+      if (t.lay) { LAY = JSON.parse(JSON.stringify(t.lay)); setLayout(LAY.n || 1); }
     }
   };
 
@@ -990,5 +1002,10 @@
   setInterval(runAudit, 15000); setTimeout(runAudit, 6000);
   let pt = performance.now();
   (function loop() { const nt = performance.now(); repTick(nt - pt); pt = nt; if (dirty && eng) { dirty = false; try { view === 'fp' ? drawFP() : drawHM(); } catch (e) { console.error(e); } } requestAnimationFrame(loop); })();
+  window.NPX = { HOOK, $, REST, ses, PANE, C, up, dn, fp, fv, ft, fs, fd, ping, ask, toggle, simOrder, repStart, repStop, setView, follow, idxAt,
+    get sym() { return sym; }, get SY() { return SY; }, get eng() { return eng; }, get live() { return live; }, get feed() { return feed; }, get sim() { return sim; }, get rep() { return rep; },
+    get G() { return G; }, get cfg() { return cfg; }, saveCfg, get D() { return D; }, get heat() { return heat; }, get heatRef() { return hv.ref; }, get skew() { return skew; },
+    get vwap() { return G.nb ? vw[G.nb - 1] : null; }, get view() { return view; }, dirty() { dirty = true; },
+    capture(w) { const c = $('fp'); if (!c.width) return null; const s = Math.min(1, (w || 900) / c.width), o = document.createElement('canvas'); o.width = c.width * s; o.height = c.height * s; const x = o.getContext('2d'); x.fillStyle = '#03060c'; x.fillRect(0, 0, o.width, o.height); x.drawImage(c, 0, 0, o.width, o.height); return o.toDataURL('image/jpeg', 0.72); } };
   window.__np = { get eng() { return eng; }, get live() { return live; }, get sim() { return sim; }, get feed() { return feed; }, get audit() { return audit; }, get heat() { return heat; }, get hist() { return hist; }, get D() { return D; }, G, v, cfg };
 })();

@@ -224,10 +224,10 @@ footer{border-top:1px solid var(--line);padding:56px 0 46px;font:400 14px var(--
   <h2 class="rv">Preguntas frecuentes</h2>
   <div class="faq rv" style="margin-top:26px">
     <details><summary>¿Cómo me suscribo?</summary><p>Elige un plan y paga. Recibes una clave de licencia: crea tu cuenta, pega la clave y entras a la plataforma.</p></details><details><summary>¿Qué diferencia hay entre los planes?</summary><p>Ninguna en funciones. Los tres incluyen todo; el trimestral y el anual salen más baratos por mes.</p></details>
-    <details><summary>¿En qué equipos funciona?</summary><p>En Mac con chip Apple (M1 en adelante) con la app de escritorio, y en cualquier computadora desde el navegador. El instalador para Windows está en desarrollo.</p></details>
+    <details><summary>¿En qué equipos funciona?</summary><p>App de escritorio para Mac con chip Apple (M1 en adelante) y para Windows, y en cualquier computadora desde el navegador. La primera vez que abras la app, tu sistema pedirá confirmación porque aún no está firmada: en Mac, clic derecho → Abrir; en Windows, "Más información" → "Ejecutar de todas formas".</p></details>
     <details><summary>¿Qué mercados trae?</summary><p>Contratos perpetuos de Binance Futures: las 60 criptos con más volumen, índices como Nasdaq 100 (QQQ) y S&amp;P 500 (SPY), oro, plata, petróleo y acciones como NVDA, TSLA o AAPL.</p></details>
     <details><summary>¿Trae el NQ, el ES o forex?</summary><p>Trae el Nasdaq 100 y el S&amp;P 500 como contratos perpetuos (QQQ y SPY), con order flow real. No son los futuros de CME ni un CFD, así que su precio no es idéntico. Forex todavía no.</p></details>
-    <details><summary>¿Puedo operar con dinero real desde la plataforma?</summary><p>No. La terminal es simulada: sirve para practicar y medir tu ejecución, pero no envía órdenes al mercado.</p></details>
+    <details><summary>¿Puedo operar con dinero real desde la plataforma?</summary><p>Sí, conectando tu cuenta de Binance Futures con una llave de API. También puedes practicar en simulado o en la cuenta de prueba de Binance. Tus llaves se guardan solo en tu equipo.</p></details>
     <details><summary>¿Incluye señales o recomendaciones?</summary><p>No. Es una herramienta de análisis: te muestra los datos, la decisión es tuya.</p></details>
   </div>
 </div></section>
@@ -252,7 +252,7 @@ const PLANES = [
   { id: 'anual', nombre: 'ANUAL', mes: 19, cada: 'Se cobran $228 al año', ahorro: 'Ahorras 34%', hot: 1, pago: 'https://whop.com/checkout/plan_gnlsGykkcw0Iw/' },
   { id: 'trimestral', nombre: 'TRIMESTRAL', mes: 25, cada: 'Se cobran $75 cada 3 meses', ahorro: 'Ahorras 14%', pago: 'https://whop.com/checkout/plan_8uEqh4fWTABID/' }
 ];
-const INCLUYE = ['Cripto, índices, materias primas y acciones', 'Clusters, trades grandes y liquidez', 'Replay, terminal simulada e historial', 'App para Mac y versión de navegador'];
+const INCLUYE = ['Cripto, índices, materias primas y acciones', 'Clusters, trades grandes y liquidez', 'Replay, terminal simulada e historial', 'Apps para Mac y Windows, y navegador'];
 const $ = id => document.getElementById(id);
 $('plans').innerHTML = PLANES.map(p => `<div class="plan${p.hot ? ' hot' : ''}">${p.hot ? '<span class="tg">Más elegido</span>' : ''}<small>${p.nombre}</small>
   <div class="price">$${p.mes}<span>USD al mes</span></div><div class="bill">${p.cada}${p.ahorro ? ' · <b>' + p.ahorro + '</b>' : ''}</div>

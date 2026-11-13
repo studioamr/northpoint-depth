@@ -44,7 +44,7 @@ option,optgroup{background:#0c1016}
 .cv canvas{position:absolute;inset:0;width:100%;height:100%;cursor:crosshair}
 .right{width:300px;border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
 .rt{display:flex;border-bottom:1px solid var(--line)}
-.rt button{flex:1;border:0;border-radius:0;background:none;color:var(--mut);padding:9px 0;font-size:11px;letter-spacing:.08em;border-bottom:2px solid transparent}
+.rt button{flex:1;font-size:10px!important;letter-spacing:.04em!important;border:0;border-radius:0;background:none;color:var(--mut);padding:9px 0;font-size:11px;letter-spacing:.08em;border-bottom:2px solid transparent}
 .rt button.on{color:var(--tx);border-bottom-color:var(--ac)}
 .pn{flex:1;display:flex;flex-direction:column;min-height:0}.pn[hidden]{display:none}
 .h{font-size:10px;letter-spacing:.14em;color:var(--mut);padding:8px 12px 6px;display:flex;justify-content:space-between;align-items:center}
@@ -93,6 +93,15 @@ input[type=range]{width:70px;accent-color:#5ab0ff}
 #toast{position:fixed;right:16px;bottom:44px;z-index:40;display:flex;flex-direction:column;gap:8px}
 #toast div{background:#0a1528;border:1px solid rgba(255,209,102,.5);border-radius:12px;padding:11px 14px;min-width:240px;box-shadow:0 14px 40px rgba(0,0,0,.6);font:12px var(--sans)}
 #toast b{display:block;color:#ffd166;margin-bottom:2px}
+.mod{position:fixed;inset:0;z-index:45;background:rgba(2,5,12,.82);display:none;overflow:auto;padding:28px}
+.mod>div{max-width:1180px;margin:0 auto;background:#081120;border:1px solid var(--line);border-radius:16px;padding:22px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0}.kpis div{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--card)}
+.kpis small{display:block;font:10px var(--sans);letter-spacing:.12em;color:var(--mut)}.kpis b{font:600 20px var(--mono)}
+.jt{width:100%;border-collapse:collapse;font:12px var(--mono)}.jt td,.jt th{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left}.jt th{color:var(--mut);font-weight:400}
+.jt img{width:96px;border-radius:6px;display:block}.jt tr{cursor:pointer}.jt tr:hover td{background:var(--card)}
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}.chips button{padding:3px 8px;font-size:11px;border-radius:99px}.chips button.on{background:rgba(90,176,255,.2);border-color:var(--ac)}
+.fld{display:grid;grid-template-columns:1fr 110px;gap:6px 8px;align-items:center;margin:6px 0}.fld input,.fld select{width:100%}
+.warn{border:1px solid rgba(255,209,102,.5);background:rgba(255,209,102,.08);border-radius:10px;padding:9px 11px;color:#ffe3a3;font-size:12px;line-height:1.45;margin:8px 0}
 #ask{position:fixed;inset:0;z-index:50;display:none;place-items:center;background:rgba(0,0,0,.55)}
 #ask form{background:#081120;border:1px solid var(--line);border-radius:14px;padding:18px;width:320px;display:grid;gap:10px}
 #ask b{font:600 14px var(--sans)}#ask input{padding:10px;font-size:14px}#ask div{display:flex;gap:8px;justify-content:flex-end}
@@ -135,6 +144,7 @@ body.pane .top{padding:5px 8px}
   </div>
   <div class="sp"></div>
   <a id="dlMac" class="nopane" href="https://github.com/studioamr/northpoint-depth/releases/latest/download/NORTHPOINT-DEPTH-mac-arm64.dmg" title="App de escritorio para Mac con chip Apple" style="font:12px var(--sans);color:var(--tx);background:var(--card);border:1px solid var(--line);border-radius:9px;padding:6px 10px;text-decoration:none">App para Mac</a>
+  <a id="dlWin" class="nopane" href="https://github.com/studioamr/northpoint-depth/releases/latest/download/NORTHPOINT-DEPTH-Windows.exe" title="App de escritorio para Windows" style="font:12px var(--sans);color:var(--tx);background:var(--card);border:1px solid var(--line);border-radius:9px;padding:6px 10px;text-decoration:none">Windows</a>
   <button id="helpB" class="nopane" title="Atajos de teclado">?</button>
   <button id="usr" class="nopane" title="Cerrar sesión"></button>
 </div>
@@ -159,7 +169,7 @@ body.pane .top{padding:5px 8px}
     <div class="cv"><canvas id="fp"></canvas><canvas id="hm" style="display:none"></canvas></div>
   </div>
   <div class="right">
-    <div class="rt" id="rtabs"><button data-p="pBook" class="on">LIBRO</button><button data-p="pWatch">MERCADOS</button><button data-p="pAl">ALERTAS</button></div>
+    <div class="rt" id="rtabs"><button data-p="pBook" class="on">LIBRO</button><button data-p="pWatch">MERCADOS</button><button data-p="pAl">ALERTAS</button><button data-p="pJr">DIARIO</button><button data-p="pAc">CUENTA</button></div>
     <div class="pn" id="pBook">
       <div class="termW"><div class="h"><span>TERMINAL · SIMULADO</span><button id="trkB" class="mini">Historial</button></div>
       <div class="term"><div class="row"><input id="simQ" type="number" step="any" min="0"><button id="buy" class="b">COMPRAR</button><button id="sell" class="s">VENDER</button><button id="flat">Cerrar</button></div>
@@ -171,8 +181,10 @@ body.pane .top{padding:5px 8px}
       <div class="h" style="border-top:1px solid var(--line)"><span>CINTA</span><select id="tapeMin"></select></div>
       <div id="tape"></div>
     </div>
-    <div class="pn" id="pWatch" hidden><div class="list" id="watch"></div></div>
-    <div class="pn" id="pAl" hidden><div class="al" id="alBox"></div></div>
+    <div class="pn" id="pWatch" hidden><div id="corr"></div><div class="list" id="watch"></div></div>
+    <div class="pn" id="pAl" hidden><div class="al" id="alBox"></div><div class="al" id="alBox2"></div></div>
+    <div class="pn" id="pJr" hidden><div class="al" id="jrBox"></div></div>
+    <div class="pn" id="pAc" hidden><div class="al" id="acBox"></div></div>
   </div>
   <div id="grid"></div>
 </div>
@@ -189,5 +201,6 @@ body.pane .top{padding:5px 8px}
 <script src="js/engine.js"></script>
 <script src="js/feed-binance.js"></script>
 <script src="js/app.js"></script>
+<script src="js/pro.js"></script>
 </body>
 </html>
