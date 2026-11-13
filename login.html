@@ -64,6 +64,7 @@ function set(m){mode=m;for(const b of $('seg').children)b.classList.toggle('on',
   $('go').textContent=m==='in'?'Entrar':'Crear cuenta y entrar';$('pw').autocomplete=m==='in'?'current-password':'new-password';$('err').textContent=''}
 $('seg').onclick=e=>{const b=e.target.closest('button');if(b)set(b.dataset.m)};
 if(location.hash==='#registro')set('up');
+if(new URLSearchParams(location.search).get('pagado')==='1'){set('up');$('sub').textContent='Pago recibido. Crea tu cuenta para entrar a la plataforma.';$('sub').style.color='#3ddc97'}
 addEventListener('hashchange',()=>set(location.hash==='#registro'?'up':'in'));
 $('f').onsubmit=async e=>{e.preventDefault();$('err').textContent='';
   try{if(mode==='up')await NPAuth.register($('name').value,$('email').value,$('pw').value);else await NPAuth.login($('email').value,$('pw').value);

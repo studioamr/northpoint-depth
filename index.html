@@ -244,18 +244,19 @@ footer{border-top:1px solid var(--line);padding:56px 0 46px;font:400 14px var(--
 
 <script>
 /* ====== PLANES (cámbialos aquí) ======
-   mes = lo que sale por mes · cada = cómo se cobra · los tres incluyen lo mismo. */
+   mes = lo que sale por mes · cada = cómo se cobra · los tres incluyen lo mismo.
+   stripe = el Payment Link de ese plan (https://buy.stripe.com/...). Vacío = el botón lleva a crear cuenta, sin cobrar. */
 const PLANES = [
-  { id: 'mensual', nombre: 'MENSUAL', mes: 29, cada: 'Se cobra cada mes' },
-  { id: 'anual', nombre: 'ANUAL', mes: 19, cada: 'Se cobran $228 al año', ahorro: 'Ahorras 34%', hot: 1 },
-  { id: 'trimestral', nombre: 'TRIMESTRAL', mes: 25, cada: 'Se cobran $75 cada 3 meses', ahorro: 'Ahorras 14%' }
+  { id: 'mensual', nombre: 'MENSUAL', mes: 29, cada: 'Se cobra cada mes', stripe: '' },
+  { id: 'anual', nombre: 'ANUAL', mes: 19, cada: 'Se cobran $228 al año', ahorro: 'Ahorras 34%', hot: 1, stripe: '' },
+  { id: 'trimestral', nombre: 'TRIMESTRAL', mes: 25, cada: 'Se cobran $75 cada 3 meses', ahorro: 'Ahorras 14%', stripe: '' }
 ];
 const INCLUYE = ['Los 60 mercados cripto con más volumen', 'Clusters, trades grandes y liquidez', 'Replay, terminal simulada e historial', 'App para Mac y versión de navegador'];
 const $ = id => document.getElementById(id);
 $('plans').innerHTML = PLANES.map(p => `<div class="plan${p.hot ? ' hot' : ''}">${p.hot ? '<span class="tg">Más elegido</span>' : ''}<small>${p.nombre}</small>
   <div class="price">$${p.mes}<span>USD al mes</span></div><div class="bill">${p.cada}${p.ahorro ? ' · <b>' + p.ahorro + '</b>' : ''}</div>
   <ul>${INCLUYE.map(t => '<li>' + t + '</li>').join('')}</ul>
-  <a class="btn${p.hot ? '' : ' o'}" href="login.html?plan=${p.id}#registro">Elegir ${p.nombre.toLowerCase()} <svg viewBox="0 0 24 24"><path d="M7 17L17 7M9 7h8v8"/></svg></a></div>`).join('');
+  <a class="btn${p.hot ? '' : ' o'}" href="${/^https:\/\/buy\.stripe\.com\//.test(p.stripe || '') ? p.stripe : 'login.html?plan=' + p.id + '#registro'}">Elegir ${p.nombre.toLowerCase()} <svg viewBox="0 0 24 24"><path d="M7 17L17 7M9 7h8v8"/></svg></a></div>`).join('');
 
 /* ---------- ilustraciones dibujadas (datos de ejemplo, no el mercado real) ---------- */
 const UP = '#22d64a', DN = '#7a4dff', OR = '#ff9a2e', MONO = '"JetBrains Mono",ui-monospace,monospace';
