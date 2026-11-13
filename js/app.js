@@ -1,4 +1,5 @@
-/* NORTHPOINT DEPTH · interfaz: footprint, heatmap de liquidez, libro, cinta y auditoría. */
+/* NORTHPOINT DEPTH · plataforma: gráfico de clusters con historia profunda, heatmap, libro, cinta,
+   indicadores, dibujos, replay, terminal simulada y auditoría. */
 (function () {
   'use strict';
   const $ = id => document.getElementById(id);
@@ -7,21 +8,24 @@
   if (!ses) { location.replace('login.html'); return; }
   if (DEMO) document.body.classList.add('demo');
   const MONO = '"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace';
+  const REST = 'https://fapi.binance.com/fapi/v1/';
   const C = { up: '#3ddc97', dn: '#ff5c70', ac: '#7aa2ff', tx: '#e8ecf3', mut: '#7c8696', line: 'rgba(255,255,255,.06)' };
-  const up = a => `rgba(61,220,151,${a})`, dn = a => `rgba(255,92,112,${a})`;
-  /* tick = tamaño real del tick · groups/hg/rng en ticks · qd = decimales de cantidad */
+  const up = a => `rgba(61,220,151,${a})`, dn = a => `rgba(255,92,112,${a})`, bl = a => `rgba(122,162,255,${a})`;
+
+  /* ---------- mercados ---------- */
+  /* tick = tamaño real del tick · groups/hg/rng en ticks · qd = decimales de cantidad (respaldo si falla la lista) */
   let SY = [
-    { id: 'BTCUSDT', tick: 0.1, dec: 1, qd: 3, groups: [10, 50, 100, 250, 500], g0: 100, hg: 10, volBar: 100, rng: 500, tape: [0.5, 1, 5, 10], minImb: 0.5, big: 5 },
-    { id: 'ETHUSDT', tick: 0.01, dec: 2, qd: 3, groups: [10, 25, 50, 100, 200], g0: 50, hg: 10, volBar: 2000, rng: 300, tape: [10, 50, 100, 500], minImb: 5, big: 100 },
-    { id: 'SOLUSDT', tick: 0.01, dec: 2, qd: 2, groups: [1, 2, 5, 10, 20], g0: 5, hg: 1, volBar: 20000, rng: 30, tape: [100, 500, 1000, 5000], minImb: 50, big: 1000 }
+    { id: 'BTCUSDT', tick: 0.1, dec: 1, qd: 3, groups: [10, 50, 100, 250, 500], g0: 100, hg: 10, volBar: 100, dBar: 25, rng: 500, tape: [0.5, 1, 5, 10], minImb: 0.5, big: 5, q0: 0.1 },
+    { id: 'ETHUSDT', tick: 0.01, dec: 2, qd: 3, groups: [10, 25, 50, 100, 200], g0: 50, hg: 10, volBar: 2000, dBar: 500, rng: 300, tape: [10, 50, 100, 500], minImb: 5, big: 100, q0: 1 },
+    { id: 'SOLUSDT', tick: 0.01, dec: 2, qd: 2, groups: [1, 2, 5, 10, 20], g0: 5, hg: 1, volBar: 20000, dBar: 5000, rng: 30, tape: [100, 500, 1000, 5000], minImb: 50, big: 1000, q0: 10 }
   ];
-  SY[0].q0 = 0.1; SY[1].q0 = 1; SY[2].q0 = 10;
-  /* Todos los perpetuos USDT de Binance: tick, filas, tamaño de trade grande, etc. salen del precio y del volumen real de 24 h */
   const nice = x => { const p = Math.pow(10, Math.floor(Math.log10(x))), m = x / p; return +((m < 1.5 ? 1 : m < 3.5 ? 2.5 : m < 7.5 ? 5 : 10) * p).toPrecision(3); };
   const niceI = x => Math.max(1, Math.round(nice(Math.max(1, x))));
+  const niceStep = x => { if (!(x > 1)) return 1; const p = Math.pow(10, Math.floor(Math.log10(x))), m = x / p; return Math.round((m <= 1 ? 1 : m <= 2 ? 2 : m <= 5 ? 5 : 10) * p); };
   const decs = s => { s = String(+s); if (s.includes('e-')) return +s.split('e-')[1]; const i = s.indexOf('.'); return i < 0 ? 0 : s.length - i - 1; };
+  /* Los perpetuos USDT de Binance: tick, filas, trade grande, etc. salen del precio y del volumen real de 24 h */
   async function loadSyms() {
-    const [ei, tk] = await Promise.all(['exchangeInfo', 'ticker/24hr'].map(p => fetch('https://fapi.binance.com/fapi/v1/' + p).then(r => r.json())));
+    const [ei, tk] = await Promise.all(['exchangeInfo', 'ticker/24hr'].map(p => fetch(REST + p).then(r => r.json())));
     const T = new Map(tk.map(t => [t.symbol, t])), out = [];
     for (const s of ei.symbols) {
       if (s.contractType !== 'PERPETUAL' || s.status !== 'TRADING' || s.quoteAsset !== 'USDT') continue;
@@ -30,27 +34,34 @@
       const tick = +pf.tickSize, g0 = niceI(+t.lastPrice * 0.00015 / tick), m = +t.volume / 1440, big = nice(m / 20);
       out.push({ id: s.symbol, tick, dec: decs(pf.tickSize), qd: Math.min(3, decs(lf.stepSize)), g0,
         groups: [...new Set([0.1, 0.5, 1, 2.5, 5].map(k => Math.max(1, Math.round(g0 * k))))], hg: Math.max(1, Math.round(g0 / 10)),
-        volBar: nice(m), rng: g0 * 5, tape: [nice(big / 10), nice(big / 4), big, nice(big * 2)], minImb: nice(m / 200), big,
+        volBar: nice(m), dBar: nice(m / 4), rng: g0 * 5, tape: [nice(big / 10), nice(big / 4), big, nice(big * 2)], minImb: nice(m / 200), big,
         q0: Math.max(+lf.stepSize, nice(m / 1000)), qv: +t.quoteVolume });
     }
     out.sort((a, b) => b.qv - a.qv); if (out.length) SY = out.slice(0, 60);
   }
-  const CK = 'npd.cfg.' + ses.email;
-  const loadCfg = () => { try { return JSON.parse(localStorage.getItem(CK)) || {}; } catch (e) { return {}; } };
-  const saveCfg = () => { if (DEMO) return; try { localStorage.setItem(CK, JSON.stringify({ sym: sym.id, bar: $('barSel').value, imb: $('imbSel').value, hist: $('histSel').value })); } catch (e) {} };
+
+  /* ---------- ajustes guardados por usuario ---------- */
+  const CK = 'npd.cfg2.' + ses.email;
+  const IND0 = { prof: 1, vwap: 1, bands: 0, ema1: 0, ema2: 0, big: 1, imb: 1, zones: 1, poc: 1, heat: 0, stats: 1, day: 1 };
+  const cfg = { sym: 'BTCUSDT', bar: 'time:60000', mode: 'ba', imb: '3', dep: '2', e1: 20, e2: 50, srch: 0, bigX: 2, ind: Object.assign({}, IND0) };
+  try { const s = JSON.parse(localStorage.getItem(CK)); if (s && !DEMO) { Object.assign(cfg, s); cfg.ind = Object.assign({}, IND0, s.ind); } } catch (e) {}
+  const saveCfg = () => { if (DEMO) return; try { localStorage.setItem(CK, JSON.stringify(cfg)); } catch (e) {} };
+
+  /* ---------- estado ---------- */
   /* eng = motor que se dibuja (en vivo o replay) · live = siempre el de en vivo */
-  const geo = { ch: 0, cw: 0 }; let grab = null; // geometría del footprint y línea (sl/tp) que se está arrastrando
-  let live, rep = null, bigs = [], sim = { pos: 0, avg: 0, real: 0, sl: null, tp: null };
-  let sym = SY[0], eng, feed, view = 'fp', st = 'conectando', dirty = true, mouse = null;
-  const v = { barW: 96, rowH: 16, offX: 0, cK: null, follow: true };
+  let sym = SY[0], eng, live, feed, rep = null, view = 'fp', st = 'conectando', dirty = true, mouse = null;
+  const v = { barW: 30, rowH: 16, rh: 16, offX: 0, cK: null, follow: true, autoY: true };
   const hv = { pps: 8, rowPx: 4, cK: null, follow: true, tR: 0, ref: 1 };
   const HR = 600, HMS = 500, HMAX = 4000;
-  let heat = [], tape = [], cur = null, tapeMin = 1, domC = null;
+  let heat = [], tape = [], cur = null, tapeMin = 1, domC = null, bigs = [], pend = [];
+  let hist = [], histTok = 0, day = null;                 // velas históricas del exchange y niveles del día
+  let D = [], tool = 'cur', draft = null, ruler = null;   // dibujos
+  let sim = { pos: 0, avg: 0, real: 0, sl: null, tp: null }, grab = null;
+  const G = { A: [], nb: 0, xR: 0, ch: 0, cw: 0, rh: 16, g: 1 }; // geometría del último cuadro, para el mouse
   const stat = { cnt: 0, tps: 0, lat: 0 };
   let audit = { rows: [], ok: 0, n: 0 };
-  /* diferencia entre el reloj de esta máquina y el del exchange, para medir latencia real */
-  let skew = 0;
-  (async () => { try { const a = Date.now(), j = await (await fetch('https://fapi.binance.com/fapi/v1/time')).json(), b = Date.now(); skew = (a + b) / 2 - j.serverTime; } catch (e) {} })();
+  let skew = 0; // diferencia entre el reloj de esta máquina y el del exchange
+  (async () => { try { const a = Date.now(), j = await (await fetch(REST + 'time')).json(), b = Date.now(); skew = (a + b) / 2 - j.serverTime; } catch (e) {} })();
 
   function fit(c) {
     const d = window.devicePixelRatio || 1, w = c.clientWidth, h = c.clientHeight;
@@ -59,41 +70,107 @@
   }
   const fv = q => q >= 1e6 ? +(q / 1e6).toPrecision(3) + 'M' : q >= 10000 ? (q / 1000).toFixed(0) + 'k' : q >= 1000 ? (q / 1000).toFixed(1) + 'k'
     : q >= 100 ? q.toFixed(0) : q >= 10 ? q.toFixed(Math.min(1, sym.qd)) : q >= 1 ? q.toFixed(Math.min(2, sym.qd)) : q.toFixed(sym.qd);
+  const fs = q => (q >= 0 ? '+' : '-') + fv(Math.abs(q));
   const fp = k => (k * sym.tick).toFixed(sym.dec);
   const p2 = n => (n < 10 ? '0' : '') + n;
   const ft = (t, s) => { const d = new Date(t); return p2(d.getHours()) + ':' + p2(d.getMinutes()) + (s ? ':' + p2(d.getSeconds()) : ''); };
+  const fd = t => { const d = new Date(t); return p2(d.getDate()) + '/' + p2(d.getMonth() + 1) + ' ' + ft(t); };
+  const fdur = ms => { const m = Math.round(ms / 60000); return m >= 60 ? Math.floor(m / 60) + ' h ' + p2(m % 60) + ' m' : m + ' min'; };
 
   /* ---------- arranque / configuración ---------- */
   function barCfg() {
     const [type, sz] = $('barSel').value.split(':');
-    return { type, size: sz === 'V' ? sym.volBar : sz === 'R' ? sym.rng : +sz, group: +$('grpSel').value, ratio: +$('imbSel').value, minImb: sym.minImb };
+    return { type, size: sz === 'V' ? sym.volBar : sz === 'D' ? sym.dBar : sz === 'R' ? sym.rng : +sz, group: +$('grpSel').value, ratio: +$('imbSel').value, minImb: sym.minImb };
   }
   function fillSel() {
     $('grpSel').innerHTML = sym.groups.map(g => `<option value="${g}"${g === sym.g0 ? ' selected' : ''}>Fila ${(g * sym.tick).toFixed(sym.dec)}</option>`).join('');
     $('tapeMin').innerHTML = sym.tape.map((m, i) => `<option value="${m}"${i === 1 ? ' selected' : ''}>&ge; ${+m.toPrecision(3)}</option>`).join('');
     tapeMin = sym.tape[1]; $('simQ').value = sym.q0;
-    const b = $('barSel'); b.options[6].text = 'Vol ' + fv(sym.volBar); b.options[7].text = 'Rango ' + (sym.rng * sym.tick).toFixed(sym.dec);
+    for (const o of $('barSel').options) {
+      if (o.value === 'volume:V') o.text = 'Volumen ' + fv(sym.volBar);
+      if (o.value === 'delta:D') o.text = 'Delta ' + fv(sym.dBar);
+      if (o.value === 'range:R') o.text = 'Rango ' + (sym.rng * sym.tick).toFixed(sym.dec);
+    }
   }
   function start() {
     if (feed) feed.stop();
-    heat = []; tape = []; cur = null; domC = null; v.cK = hv.cK = null; v.offX = 0; v.follow = hv.follow = true; hv.ref = 1;
+    heat = []; tape = []; cur = null; domC = null; bigs = []; pend = []; hist = []; day = null; draft = ruler = null;
+    v.cK = hv.cK = null; v.offX = 0; v.follow = hv.follow = true; v.autoY = true; hv.ref = 1;
     audit = { rows: [], ok: 0, n: 0 }; stat.lat = 0; st = 'conectando';
-    live = eng = new Engine(barCfg()); rep = null; $('rp').style.display = 'none'; bigs = []; sim = { pos: 0, avg: 0, real: 0, sl: null, tp: null };
-    feed = new BinanceFeed(sym, { trade: onTrade, status: s => { st = s; }, reset: () => { live.clear(); tape = []; bigs = []; } }, +$('histSel').value);
-    feed.start(); dirty = true;
+    sim = { pos: 0, avg: 0, real: 0, sl: null, tp: null }; rep = null; $('rp').style.display = 'none';
+    live = eng = new Engine(barCfg());
+    const f = feed = new BinanceFeed(sym, {
+      trade: onTrade, status: s => { st = s; },
+      reset: () => { live.clear(); tape = []; bigs = []; pend = []; },
+      older: b => { if (f === feed) pend.push(b); }
+    }, 3);
+    f.until = Date.now() - (DEMO ? 0.25 : +cfg.dep) * 3600e3;
+    f.start(); loadHist(); loadDay(); loadDraw(); dirty = true;
   }
   function onTrade(t, p, q, s, E) {
     live.add(t, p, q, s); stat.cnt++;
     if (!rep && sim.pos) bracket(p);
     if (E) { const l = Math.max(0, Date.now() - skew - E); stat.lat = stat.lat ? stat.lat * 0.9 + l * 0.1 : l; }
     if (cur && cur.t === t && cur.s === s) { cur.q += q; cur.pv += p * q; }
-    else { if (cur) { if (cur.q >= tapeMin) { tape.unshift(cur); if (tape.length > 40) tape.pop(); } if (cur.q >= sym.big) { bigs.push(cur); if (bigs.length > 4000) bigs.shift(); } } cur = { t, s, q, pv: p * q }; }
+    else {
+      if (cur) { if (cur.q >= tapeMin) { tape.unshift(cur); if (tape.length > 40) tape.pop(); } if (cur.q >= sym.big) { bigs.push(cur); if (bigs.length > 20000) bigs.shift(); } }
+      cur = { t, s, q, pv: p * q };
+    }
     dirty = true;
+  }
+  /* historia tick a tick que va llegando hacia atrás: se mete al motor por tandas */
+  function mergeOlder() {
+    if (!pend.length || !live) return;
+    const bs = pend.reverse(); pend = []; let k = 0; for (const b of bs) k += b.length;
+    const T = new Float64Array(k), P = new Int32Array(k), Q = new Float64Array(k), S = new Uint8Array(k); let i = 0;
+    for (const b of bs) for (const d of b) { T[i] = d.T; P[i] = feed.px(d.p); Q[i] = +d.q; S[i] = d.m ? 1 : 0; i++; }
+    if (!live.prepend(T, P, Q, S, k)) { feed.deepStop = true; return; }
+    live.set({}); scanBigs(); dirty = true;
+  }
+  function scanBigs() { // trades grandes de todo lo cargado (órdenes agresoras del mismo instante y lado, sumadas)
+    const e = live, out = []; let a = null;
+    for (let i = 0; i < e.n; i++) {
+      if (a && a.t === e.T[i] && a.s === e.S[i]) { a.q += e.Q[i]; a.pv += e.P[i] * e.Q[i]; }
+      else { if (a && a.q >= sym.big) out.push(a); a = { t: e.T[i], s: e.S[i], q: e.Q[i], pv: e.P[i] * e.Q[i] }; }
+    }
+    bigs = out;
+  }
+  /* velas oficiales del exchange para la historia larga (traen volumen y compra agresora: delta exacto por vela) */
+  const IV = { 60000: '1m', 180000: '3m', 300000: '5m', 900000: '15m', 1800000: '30m', 3600000: '1h', 14400000: '4h' };
+  const mk = (k, tick) => { const px = s => Math.round(parseFloat(s) / tick), vv = +k[5], b = +k[9]; return { t0: k[0], o: px(k[1]), h: px(k[2]), l: px(k[3]), c: px(k[4]), vol: vv, buy: b, sell: vv - b, n: k[8], lv: null }; };
+  async function loadHist() {
+    const tok = ++histTok; hist = []; const o = barCfg(), iv = o.type === 'time' && IV[o.size], id = sym.id, tick = sym.tick; if (!iv) return;
+    try {
+      let end = '', all = [];
+      for (let pg = 0; pg < 2; pg++) {
+        const a = await (await fetch(`${REST}klines?symbol=${id}&interval=${iv}&limit=1500${end}`)).json();
+        if (tok !== histTok) return; if (!a.length) break;
+        all = a.concat(all); end = '&endTime=' + (a[0][0] - 1); if (a.length < 1500) break;
+      }
+      hist = all.map(k => mk(k, tick)); dirty = true;
+    } catch (e) {}
+  }
+  /* mantiene al día las últimas velas del exchange (la vela que los ticks todavía no cubren completa) */
+  async function refreshHist() {
+    const o = live && live.o; if (!o || o.type !== 'time' || !IV[o.size] || !hist.length) return; const tok = histTok, tick = sym.tick;
+    try {
+      const a = await (await fetch(`${REST}klines?symbol=${sym.id}&interval=${IV[o.size]}&limit=3`)).json(); if (tok !== histTok) return;
+      for (const k of a) { const b = mk(k, tick); let i = hist.length - 1; while (i >= 0 && hist[i].t0 > b.t0) i--; if (i >= 0 && hist[i].t0 === b.t0) hist[i] = b; else hist.splice(i + 1, 0, b); }
+      dirty = true;
+    } catch (e) {}
+  }
+  async function loadDay() {
+    const tok = histTok, tick = sym.tick;
+    try {
+      const a = await (await fetch(`${REST}klines?symbol=${sym.id}&interval=1d&limit=2`)).json(); if (tok !== histTok || a.length < 2) return;
+      const px = s => Math.round(parseFloat(s) / tick);
+      day = [['Máx. ayer', px(a[0][2])], ['Mín. ayer', px(a[0][3])], ['Cierre ayer', px(a[0][4])], ['Apertura hoy', px(a[1][1])]]; dirty = true;
+    } catch (e) {}
   }
 
   /* ---------- foto del libro cada 500 ms para el heatmap ---------- */
   function snapHeat() {
-    if (!feed || !feed.bookOk || live.last == null) return;
+    if (!feed || !feed.bookOk || !live || live.last == null) return;
     const [bb, ba] = feed.best(); if (!isFinite(bb) || !isFinite(ba)) return;
     const hg = sym.hg, base = Math.floor((bb + ba) / 2 / hg) - HR / 2, a = new Float32Array(HR);
     for (const [k, q] of feed.bids) { const i = Math.floor(k / hg) - base; if (i >= 0 && i < HR) a[i] += q; }
@@ -103,150 +180,308 @@
     if (nz.length) { const r = nz[Math.floor(nz.length * 0.97)]; hv.ref = hv.ref === 1 ? r : hv.ref * 0.95 + r * 0.05; }
     dirty = true;
   }
-
-  function hline(x, y, w, col, dash, label) {
-    x.save(); x.strokeStyle = col; x.lineWidth = 1; x.setLineDash(dash || []); x.beginPath(); x.moveTo(0, Math.round(y) + 0.5); x.lineTo(w, Math.round(y) + 0.5); x.stroke();
-    if (label) { x.fillStyle = col; x.font = '9px ' + MONO; x.textAlign = 'left'; x.fillText(label, 4, y - 6); }
-    x.restore();
-  }
-  function tag(x, cw, y, txt, bg, fg) {
-    x.fillStyle = bg; x.fillRect(cw, y - 8, 68, 16); x.fillStyle = fg || '#05070a'; x.font = '11px ' + MONO; x.textAlign = 'left'; x.fillText(txt, cw + 6, y + 0.5);
-  }
-
-  /* ---------- FOOTPRINT ---------- */
-  function drawFP() {
-    const c = $('fp'), x = fit(c), W = c.clientWidth, H = c.clientHeight; x.clearRect(0, 0, W, H);
-    const AX = 68, TB = 18, ST = 92, PR = 118, ch = H - TB - ST, cw = W - AX, g = eng.o.group, bars = eng.bars, nb = bars.length;
-    x.textBaseline = 'middle'; x.font = '11px ' + MONO;
-    if (!nb) { x.fillStyle = C.mut; x.textAlign = 'center'; x.fillText('Esperando trades…', W / 2, H / 2); return; }
-    const last = bars[nb - 1];
-    if (v.cK == null) v.cK = last.c;
-    const Y = p => ch / 2 - (p - v.cK) / g * v.rowH;
-    if (v.follow) { const yl = Y(last.c); if (yl < ch * 0.18 || yl > ch * 0.82) v.cK = last.c; }
-    const xR = cw - PR, X = i => xR - (nb - i) * v.barW + v.offX;
-    const kTop = v.cK + ch / 2 / v.rowH * g, kBot = v.cK - ch / 2 / v.rowH * g, stepK = g * Math.ceil(24 / v.rowH);
-
-    x.save(); x.beginPath(); x.rect(0, 0, cw, ch); x.clip();
-    x.fillStyle = C.line;
-    for (let k = Math.ceil(kBot / stepK) * stepK; k <= kTop; k += stepK) x.fillRect(0, Math.round(Y(k)), cw, 1);
-    /* perfil de volumen de todo lo cargado */
-    const h1 = Math.max(1, v.rowH - 1);
-    for (const [k, e] of eng.prof) {
-      const yT = Y(k + g); if (yT > ch || yT + v.rowH < 0) continue;
-      const tot = e[0] + e[1], w = tot / eng.pmax * (PR - 14), ws = w * e[0] / tot;
-      x.fillStyle = dn(0.38); x.fillRect(xR + 8, yT, ws, h1); x.fillStyle = up(0.38); x.fillRect(xR + 8 + ws, yT, w - ws, h1);
-    }
-    const ps = eng.profStats();
-    if (ps) {
-      hline(x, Y(ps.vah + g), cw, 'rgba(255,255,255,.22)', [2, 4], 'VAH');
-      hline(x, Y(ps.val), cw, 'rgba(255,255,255,.22)', [2, 4], 'VAL');
-      hline(x, Y(ps.poc) - v.rowH / 2, cw, 'rgba(122,162,255,.55)', [6, 4], 'POC');
-      hline(x, Y(ps.vwap + 0.5), cw, 'rgba(232,236,243,.5)', [1, 3], 'VWAP');
-    }
-    const num = v.barW >= 64 && v.rowH >= 11, cells = v.barW >= 18, vis = [];
-    const fs = Math.max(9, Math.min(11, v.rowH - 4));
-    for (let i = nb - 1; i >= 0; i--) {
-      const bx = X(i); if (bx >= xR) continue; if (bx + v.barW < 0) break;
-      vis.push(i);
-      const b = bars[i], s = eng.stats(b), cwd = cells ? 3 : Math.max(1, v.barW - 2), cx = bx + (cells ? 3 : 1);
-      x.fillStyle = b.c >= b.o ? C.up : C.dn;
-      const yh = Y(b.h + 0.5), yl = Y(b.l + 0.5), yo = Y(b.o + 0.5), yc = Y(b.c + 0.5);
-      x.fillRect(cx + cwd / 2 - 0.5, yh, 1, Math.max(1, yl - yh)); x.fillRect(cx, Math.min(yo, yc), cwd, Math.max(1, Math.abs(yc - yo)));
-      if (!cells) continue;
-      const x0 = bx + 9, w = v.barW - 11, mid = x0 + w / 2;
-      for (const [k, e] of b.lv) {
-        const yT = Y(k + g); if (yT > ch || yT + v.rowH < 0) continue;
-        const im = s.imb.get(k) || 0;
-        if (num) {
-          const a = Math.min(0.4, 0.05 + (e[0] + e[1]) / s.mx * 0.35);
-          x.fillStyle = e[1] >= e[0] ? up(a) : dn(a); x.fillRect(x0, yT, w, h1);
-          const ty = yT + h1 / 2 + 0.5;
-          x.textAlign = 'right'; x.font = (im < 0 ? '700 ' : '') + fs + 'px ' + MONO; x.fillStyle = im < 0 ? '#ff97a4' : 'rgba(232,236,243,.7)'; x.fillText(fv(e[0]), mid - 5, ty);
-          x.textAlign = 'left'; x.font = (im > 0 ? '700 ' : '') + fs + 'px ' + MONO; x.fillStyle = im > 0 ? '#86f3c2' : 'rgba(232,236,243,.7)'; x.fillText(fv(e[1]), mid + 5, ty);
-          x.fillStyle = 'rgba(255,255,255,.12)'; x.fillRect(mid, yT + 2, 1, h1 - 4);
-          if (im === 2 || im === -2) { x.fillStyle = im > 0 ? C.up : C.dn; x.fillRect(im > 0 ? x0 + w - 2 : x0, yT, 2, h1); }
-        } else {
-          x.fillStyle = dn(Math.min(0.9, e[0] / s.mxs)); x.fillRect(x0, yT, w / 2, h1);
-          x.fillStyle = up(Math.min(0.9, e[1] / s.mxs)); x.fillRect(mid, yT, w / 2, h1);
-        }
-        if (k === s.poc) { x.strokeStyle = C.ac; x.lineWidth = 1; x.strokeRect(x0 + 0.5, yT + 0.5, w - 1, h1 - 1); }
-      }
-      x.fillStyle = 'rgba(255,255,255,.28)'; x.fillRect(bx + 7, Y(s.vah + g), 1, Y(s.val) - Y(s.vah + g));
-    }
-    /* trades grandes: un círculo por cada orden agresora de tamaño institucional */
-    if (cells && vis.length) {
-      const tMin = bars[vis[vis.length - 1]].t0, tMax = eng.lastT;
-      for (let j = bigs.length - 1; j >= 0; j--) {
-        const b = bigs[j]; if (b.t > tMax) continue; if (b.t < tMin) break;
-        let a = 0, z = nb - 1; while (a < z) { const m = (a + z + 1) >> 1; if (bars[m].t0 <= b.t) a = m; else z = m - 1; }
-        const r = Math.max(4, Math.min(v.barW * 0.42, Math.sqrt(b.q / sym.big) * 6));
-        x.beginPath(); x.arc(X(a) + v.barW / 2 + 4, Y(b.pv / b.q + 0.5), r, 0, 6.2832);
-        x.fillStyle = b.s ? dn(0.16) : up(0.16); x.fill(); x.strokeStyle = b.s ? C.dn : C.up; x.lineWidth = 1.25; x.stroke();
-      }
-    }
-    if (sim.pos) hline(x, Y(sim.avg + 0.5), cw, C.ac, [], 'ENTRADA ' + (sim.pos > 0 ? '+' : '') + +sim.pos.toFixed(4));
-    geo.ch = ch; geo.cw = cw;
-    if (sim.pos) for (const [k, col, nm] of [['sl', C.dn, 'STOP'], ['tp', C.up, 'OBJETIVO']]) if (sim[k] != null) {
-      const pl = (sim[k] - sim.avg) * sym.tick * sim.pos;
-      hline(x, Y(sim[k] + 0.5), cw, col, [5, 3], nm + ' ' + fp(sim[k]) + '   ' + (pl >= 0 ? '+' : '') + pl.toFixed(2) + (grab === k ? '' : '   arrastra para mover'));
-    }
-    x.restore();
-
-    /* eje de precio */
-    x.font = '11px ' + MONO; x.textAlign = 'left'; x.fillStyle = C.mut;
-    for (let k = Math.ceil(kBot / stepK) * stepK; k <= kTop; k += stepK) { const y = Y(k) - v.rowH / 2; if (y > 6 && y < ch - 6) x.fillText(fp(k), cw + 6, y); }
-    const yl = Y(eng.last + 0.5); if (yl > 0 && yl < ch) tag(x, cw, yl, fp(eng.last), eng.lastS ? C.dn : C.up);
-
-    /* tira: delta por barra, CVD, volumen */
-    x.fillStyle = C.line; x.fillRect(0, ch, W, 1); x.fillRect(cw, 0, 1, H - TB);
-    const dh = ST - 30, zy = ch + 2 + dh / 2;
-    let md = 1e-9, c0 = Infinity, c1 = -Infinity;
-    for (const i of vis) { const b = bars[i]; md = Math.max(md, Math.abs(b.buy - b.sell)); c0 = Math.min(c0, b.cvd); c1 = Math.max(c1, b.cvd); }
-    x.save(); x.beginPath(); x.rect(0, ch, cw, ST + TB); x.clip();
-    x.fillStyle = C.line; x.fillRect(0, zy, cw, 1);
-    const stepL = Math.ceil(72 / v.barW);
-    for (const i of vis) {
-      const b = bars[i], bx = X(i), d = b.buy - b.sell, hh = Math.max(1, Math.abs(d) / md * (dh / 2 - 3));
-      x.fillStyle = d >= 0 ? up(0.75) : dn(0.75); x.fillRect(bx + 3, d >= 0 ? zy - hh : zy, Math.max(1, v.barW - 6), hh);
-      x.textAlign = 'center'; x.font = '10px ' + MONO;
-      if (v.barW >= 46) {
-        x.fillStyle = d >= 0 ? C.up : C.dn; x.fillText((d >= 0 ? '+' : '-') + fv(Math.abs(d)), bx + v.barW / 2, ch + dh + 9);
-        x.fillStyle = C.mut; x.fillText(fv(b.vol), bx + v.barW / 2, ch + dh + 22);
-      }
-      if (i % stepL === 0) { x.fillStyle = C.mut; x.fillText(ft(b.t0, eng.o.type !== 'time' || eng.o.size < 60000), bx + v.barW / 2, H - TB / 2); }
-    }
-    x.strokeStyle = C.ac; x.lineWidth = 1.5; x.beginPath();
-    for (let j = vis.length - 1; j >= 0; j--) {
-      const b = bars[vis[j]], px = X(vis[j]) + v.barW / 2, py = ch + 5 + (c1 - b.cvd) / ((c1 - c0) || 1) * (dh - 8);
-      j === vis.length - 1 ? x.moveTo(px, py) : x.lineTo(px, py);
-    }
-    x.stroke(); x.restore();
-    x.textAlign = 'left'; x.font = '9px ' + MONO; x.fillStyle = C.ac; x.fillText('CVD ' + (eng.cvd >= 0 ? '+' : '-') + fv(Math.abs(eng.cvd)), cw + 6, ch + 12);
-    x.fillStyle = C.mut; x.fillText('DELTA', cw + 6, ch + dh + 9); x.fillText('VOL', cw + 6, ch + dh + 22);
-
-    /* cursor y lectura */
-    let rb = last;
-    if (mouse && mouse.v === 'fp' && mouse.x < cw && mouse.y < ch) {
-      x.fillStyle = 'rgba(255,255,255,.18)'; x.fillRect(0, mouse.y, cw, 1); x.fillRect(mouse.x, 0, 1, H - TB);
-      tag(x, cw, mouse.y, fp(Math.floor(v.cK + (ch / 2 - mouse.y) / v.rowH * g)), '#1a2230', C.tx);
-      const i = nb - Math.ceil((xR + v.offX - mouse.x) / v.barW); if (i >= 0 && i < nb) rb = bars[i];
-    }
-    const s = eng.stats(rb), d = rb.buy - rb.sell;
-    $('read').innerHTML = `<b>${sym.id}</b> ${ft(rb.t0, 1)} &nbsp; A <b>${fp(rb.o)}</b> M <b>${fp(rb.h)}</b> m <b>${fp(rb.l)}</b> C <b>${fp(rb.c)}</b> &nbsp; Vol <b>${fv(rb.vol)}</b> &nbsp; Delta <b class="${d >= 0 ? 'u' : 'd'}">${d >= 0 ? '+' : '-'}${fv(Math.abs(d))}</b> &nbsp; POC <b>${fp(s.poc)}</b> &nbsp; Trades <b>${rb.n}</b>`;
-  }
-
-  /* ---------- HEATMAP DE LIQUIDEZ ---------- */
+  function j0(t) { let a = 0, b = heat.length - 1; while (a < b) { const m = (a + b + 1) >> 1; if (heat[m].t <= t) a = m; else b = m - 1; } return a; }
   const LUT = new Uint32Array(256);
   (function () {
     const S = [[0, 10, 18, 40], [0.35, 26, 58, 150], [0.72, 122, 162, 255], [1, 255, 255, 255]];
     for (let u = 0; u < 256; u++) {
       const t = Math.pow(u / 255, 0.65); let i = 0; while (i < S.length - 2 && t > S[i + 1][0]) i++;
       const a = S[i], b = S[i + 1], f = (t - a[0]) / (b[0] - a[0]);
-      const r = a[1] + (b[1] - a[1]) * f, g = a[2] + (b[2] - a[2]) * f, bl = a[3] + (b[3] - a[3]) * f, al = Math.min(255, 40 + t * 330);
-      LUT[u] = ((al << 24) | (bl << 16) | (g << 8) | r) >>> 0;
+      const r = a[1] + (b[1] - a[1]) * f, g = a[2] + (b[2] - a[2]) * f, b2 = a[3] + (b[3] - a[3]) * f, al = Math.min(255, 40 + t * 330);
+      LUT[u] = ((al << 24) | (b2 << 16) | (g << 8) | r) >>> 0;
     }
   })();
-  let off, img, rowOf;
+  /* pinta la liquidez en reposo: tx[px] = tiempo de cada columna de pixeles (creciente), rowOf[y] = fila de precio */
+  const HC = {};
+  function paintHeat(key, x, iw, ih, tx, rowOf, alpha) {
+    if (!heat.length || iw < 1 || ih < 1) return;
+    let o = HC[key];
+    if (!o || o.w !== iw || o.h !== ih) { const cv2 = document.createElement('canvas'); cv2.width = iw; cv2.height = ih; o = HC[key] = { w: iw, h: ih, cv: cv2, cx: cv2.getContext('2d') }; o.img = o.cx.createImageData(iw, ih); }
+    const d = new Uint32Array(o.img.data.buffer); d.fill(0);
+    const sc = 255 / (hv.ref * 1.6) * +$('con').value; let j = -1;
+    for (let px = 0; px < iw; px++) {
+      const t = tx[px]; if (!(t > 0)) continue;
+      if (j < 0) j = j0(t);
+      while (j + 1 < heat.length && heat[j + 1].t <= t) j++;
+      const col = heat[j]; if (col.t > t || t - col.t > 3000) continue;
+      const a = col.a, b = col.base;
+      for (let y = 0; y < ih; y++) {
+        const q = a[rowOf[y] - b];
+        if (q > 0) { let u = (q * sc) | 0; if (u > 255) u = 255; d[y * iw + px] = LUT[u]; }
+      }
+    }
+    o.cx.putImageData(o.img, 0, 0); x.globalAlpha = alpha; x.drawImage(o.cv, 0, 0, iw, ih); x.globalAlpha = 1;
+  }
+
+  function hline(x, y, w, col, dash, label, right) {
+    x.save(); x.strokeStyle = col; x.lineWidth = 1; x.setLineDash(dash || []); x.beginPath(); x.moveTo(0, Math.round(y) + 0.5); x.lineTo(w, Math.round(y) + 0.5); x.stroke();
+    if (label) { x.fillStyle = col; x.font = '9px ' + MONO; x.textAlign = right ? 'right' : 'left'; x.fillText(label, right ? w - 6 : 4, y - 6); }
+    x.restore();
+  }
+  function tag(x, cw, y, txt, bg, fg) {
+    x.fillStyle = bg; x.fillRect(cw, y - 8, 68, 16); x.fillStyle = fg || '#05070a'; x.font = '11px ' + MONO; x.textAlign = 'left'; x.fillText(txt, cw + 6, y + 0.5);
+  }
+
+  /* ---------- serie completa: velas del exchange (historia) + barras tick a tick (con clusters) ---------- */
+  let cv = new Float64Array(8192), vw = new Float64Array(8192), sd = new Float64Array(8192), e1 = new Float64Array(8192), e2 = new Float64Array(8192);
+  function build() {
+    const eb = eng.bars, o = eng.o; let A = eb;
+    if (o.type === 'time' && hist.length && eb.length && eng.firstT != null) {
+      const cut = Math.floor(eng.firstT / o.size) * o.size; // primera barra con ticks (puede estar incompleta)
+      let hi = hist.length; while (hi > 0 && hist[hi - 1].t0 >= cut) hi--;
+      if (hi) {
+        A = hist.slice(0, hi).concat(eb);
+        /* esa primera barra: los ticks no la cubren entera, así que precio y volumen salen de la vela oficial */
+        const K = hist[hi], E = eb[0];
+        if (!rep && K && K.t0 === E.t0) A[hi] = Object.assign({}, E, { o: K.o, h: Math.max(K.h, E.h), l: Math.min(K.l, E.l), vol: Math.max(K.vol, E.vol), buy: Math.max(K.buy, E.buy), sell: Math.max(K.sell, E.sell), n: Math.max(K.n, E.n), st: null });
+      }
+    }
+    const n = A.length;
+    if (n > cv.length) { const m = n * 2; cv = new Float64Array(m); vw = new Float64Array(m); sd = new Float64Array(m); e1 = new Float64Array(m); e2 = new Float64Array(m); }
+    const k1 = 2 / (cfg.e1 + 1), k2 = 2 / (cfg.e2 + 1); let c = 0, dy = -1, sv = 0, spv = 0, sp2 = 0;
+    for (let i = 0; i < n; i++) {
+      const b = A[i]; c += b.buy - b.sell; cv[i] = c;
+      const d = Math.floor(b.t0 / 864e5); if (d !== dy) { dy = d; sv = spv = sp2 = 0; } // VWAP anclado al día (UTC)
+      const tp = (b.h + b.l + b.c) / 3; sv += b.vol; spv += tp * b.vol; sp2 += tp * tp * b.vol;
+      vw[i] = sv ? spv / sv : tp; sd[i] = sv ? Math.sqrt(Math.max(0, sp2 / sv - vw[i] * vw[i])) : 0;
+      e1[i] = i ? e1[i - 1] + k1 * (b.c - e1[i - 1]) : b.c; e2[i] = i ? e2[i - 1] + k2 * (b.c - e2[i - 1]) : b.c;
+    }
+    return A;
+  }
+  function idxAt(A, t) { let a = 0, z = A.length - 1; while (a < z) { const m = (a + z + 1) >> 1; if (A[m].t0 <= t) a = m; else z = m - 1; } return a; }
+
+  /* ---------- GRÁFICO DE CLUSTERS ---------- */
+  function drawFP() {
+    const c = $('fp'), x = fit(c), W = c.clientWidth, H = c.clientHeight; x.clearRect(0, 0, W, H);
+    const I = cfg.ind, AX = 68, TB = 18, PR = I.prof ? 118 : 30, g = eng.o.group, A = build(), nb = A.length, isT = eng.o.type === 'time';
+    x.textBaseline = 'middle'; x.font = '11px ' + MONO;
+    if (!nb) { x.fillStyle = C.mut; x.textAlign = 'center'; x.fillText('Cargando mercado…', W / 2, H / 2); G.nb = 0; return; }
+    const wide = v.barW >= 64, cells = v.barW >= 18, statsOn = I.stats && v.barW >= 46;
+    const ST = statsOn ? 150 : 64, ch = H - TB - ST, cw = W - AX, last = A[nb - 1], xR = cw - PR, X = i => xR - (nb - i) * v.barW + v.offX;
+    const iHi = Math.max(0, Math.min(nb - 1, Math.ceil(nb - v.offX / v.barW) - 1)), iLo = Math.min(iHi, Math.max(0, Math.floor(nb - (xR + v.offX) / v.barW)));
+    if (v.cK == null) v.cK = last.c;
+    let rh = v.rowH;
+    if (!wide && v.autoY) { // ajusta el precio a lo visible
+      let lo = Infinity, hi = -Infinity; for (let i = iLo; i <= iHi; i++) { if (A[i].l < lo) lo = A[i].l; if (A[i].h > hi) hi = A[i].h; }
+      if (isFinite(lo)) { v.cK = (lo + hi) / 2; rh = ch * 0.84 / ((hi - lo) / g + 1); }
+    } else if (!wide) rh = v.rh;
+    else if (v.follow) { const yl = ch / 2 - (last.c - v.cK) / g * rh; if (yl < ch * 0.18 || yl > ch * 0.82) v.cK = last.c; }
+    v.rh = rh;
+    const num = wide && rh >= 11, Y = p => ch / 2 - (p - v.cK) / g * rh;
+    Object.assign(G, { A, nb, xR, ch, cw, rh, g });
+    const kTop = v.cK + ch / 2 / rh * g, kBot = v.cK - ch / 2 / rh * g, stepK = num ? g * Math.ceil(24 / rh) : niceStep(28 / rh * g);
+    const size = eng.o.size, tNow = rep ? eng.lastT : Math.max(eng.lastT || 0, feed && feed.bookT || 0);
+
+    x.save(); x.beginPath(); x.rect(0, 0, cw, ch); x.clip();
+    /* liquidez en reposo detrás de las velas */
+    if (I.heat && isT && heat.length) {
+      const iw = cw | 0, ih = ch | 0, tx = new Float64Array(iw), rowOf = new Int32Array(ih), hg = sym.hg;
+      for (let y = 0; y < ih; y++) rowOf[y] = Math.floor((v.cK + (ch / 2 - y - 0.5) / rh * g) / hg);
+      for (let px = 0; px < iw; px++) {
+        const i = nb + Math.floor((px - xR - v.offX) / v.barW);
+        tx[px] = i < 0 ? 0 : i >= nb ? tNow : Math.min(tNow, A[i].t0 + (px - X(i)) / v.barW * size);
+      }
+      paintHeat('fp', x, iw, ih, tx, rowOf, 0.85);
+    }
+    x.fillStyle = C.line;
+    for (let k = Math.ceil(kBot / stepK) * stepK; k <= kTop; k += stepK) x.fillRect(0, Math.round(Y(k)), cw, 1);
+    /* perfil de volumen de los ticks cargados */
+    const h1 = Math.max(1, rh - 1);
+    if (I.prof) {
+      for (const [k, e] of eng.prof) {
+        const yT = Y(k + g); if (yT > ch || yT + rh < 0) continue;
+        const tot = e[0] + e[1], w = tot / eng.pmax * (PR - 14), ws = w * e[0] / tot;
+        x.fillStyle = dn(0.38); x.fillRect(xR + 8, yT, ws, h1); x.fillStyle = up(0.38); x.fillRect(xR + 8 + ws, yT, w - ws, h1);
+      }
+      const ps = eng.profStats();
+      if (ps) {
+        hline(x, Y(ps.vah + g), cw, 'rgba(255,255,255,.22)', [2, 4], 'VAH');
+        hline(x, Y(ps.val), cw, 'rgba(255,255,255,.22)', [2, 4], 'VAL');
+        hline(x, Y(ps.poc) - rh / 2, cw, 'rgba(122,162,255,.55)', [6, 4], 'POC');
+      }
+    }
+    if (I.day && day) for (const [nm, p] of day) { const y = Y(p + 0.5); if (y > 0 && y < ch) hline(x, y, cw, 'rgba(232,236,243,.3)', [8, 5], nm + ' ' + fp(p), true); }
+    /* zonas de desbalance apilado: se extienden hasta que el precio las atraviesa */
+    if (I.zones && cells) {
+      for (let i = Math.max(iLo, nb - 240); i <= iHi; i++) {
+        const b = A[i]; if (!b.lv) continue; const zs = eng.stats(b).zones; if (!zs.length) continue;
+        for (const [k1, k2, sd2] of zs) {
+          let j = i + 1; while (j < nb && (sd2 > 0 ? A[j].l >= k1 : A[j].h < k2 + g)) j++;
+          const xa = X(i) + v.barW, xb = j < nb ? X(j) : xR, yT = Y(k2 + g), hh = Y(k1) - yT;
+          if (xb <= xa) continue;
+          x.fillStyle = sd2 > 0 ? up(0.09) : dn(0.09); x.fillRect(xa, yT, xb - xa, hh);
+          x.fillStyle = sd2 > 0 ? up(0.5) : dn(0.5); x.fillRect(xa, sd2 > 0 ? yT + hh - 1 : yT, xb - xa, 1);
+        }
+      }
+    }
+    /* barras */
+    const fz = Math.max(9, Math.min(11, rh - 4)), mode = cfg.mode, srch = +cfg.srch || 0;
+    for (let i = iHi; i >= iLo; i--) {
+      const bx = X(i), b = A[i], hasLv = cells && b.lv;
+      const cwd = hasLv ? 3 : Math.max(1, cells ? v.barW * 0.5 : v.barW > 3 ? v.barW - 1.5 : v.barW), cx = hasLv ? bx + 3 : bx + (v.barW - cwd) / 2;
+      x.fillStyle = b.c >= b.o ? C.up : C.dn;
+      const yh = Y(b.h + 0.5), yl = Y(b.l + 0.5), yo = Y(b.o + 0.5), yc = Y(b.c + 0.5);
+      x.fillRect(cx + cwd / 2 - 0.5, yh, 1, Math.max(1, yl - yh)); x.fillRect(cx, Math.min(yo, yc), cwd, Math.max(1, Math.abs(yc - yo)));
+      if (!hasLv) continue;
+      const s = eng.stats(b), x0 = bx + 9, w = v.barW - 11, mid = x0 + w / 2;
+      for (const [k, e] of b.lv) {
+        const yT = Y(k + g); if (yT > ch || yT + rh < 0) continue;
+        const im = I.imb ? s.imb.get(k) || 0 : 0, tot = e[0] + e[1], d = e[1] - e[0], ty = yT + h1 / 2 + 0.5;
+        if (mode === 'prof') {
+          x.fillStyle = dn(0.7); x.fillRect(mid - e[0] / s.mxs * (w / 2), yT, e[0] / s.mxs * (w / 2), h1);
+          x.fillStyle = up(0.7); x.fillRect(mid, yT, e[1] / s.mxs * (w / 2), h1);
+        } else if (mode === 'vol') {
+          x.fillStyle = bl(Math.min(0.75, 0.06 + tot / s.mx * 0.7)); x.fillRect(x0, yT, w, h1);
+          if (num) { x.textAlign = 'center'; x.font = fz + 'px ' + MONO; x.fillStyle = 'rgba(232,236,243,.85)'; x.fillText(fv(tot), mid, ty); }
+        } else if (mode === 'delta') {
+          const a = Math.min(0.7, 0.06 + Math.abs(d) / s.mx * 0.9); x.fillStyle = d >= 0 ? up(a) : dn(a); x.fillRect(x0, yT, w, h1);
+          if (num) { x.textAlign = 'center'; x.font = fz + 'px ' + MONO; x.fillStyle = 'rgba(232,236,243,.85)'; x.fillText(fs(d), mid, ty); }
+        } else if (num) {
+          const a = Math.min(0.4, 0.05 + tot / s.mx * 0.35);
+          x.fillStyle = d >= 0 ? up(a) : dn(a); x.fillRect(x0, yT, w, h1);
+          x.textAlign = 'right'; x.font = (im < 0 ? '700 ' : '') + fz + 'px ' + MONO; x.fillStyle = im < 0 ? '#ff97a4' : 'rgba(232,236,243,.7)'; x.fillText(fv(e[0]), mid - 5, ty);
+          x.textAlign = 'left'; x.font = (im > 0 ? '700 ' : '') + fz + 'px ' + MONO; x.fillStyle = im > 0 ? '#86f3c2' : 'rgba(232,236,243,.7)'; x.fillText(fv(e[1]), mid + 5, ty);
+          x.fillStyle = 'rgba(255,255,255,.12)'; x.fillRect(mid, yT + 2, 1, h1 - 4);
+        } else {
+          x.fillStyle = dn(Math.min(0.9, e[0] / s.mxs)); x.fillRect(x0, yT, w / 2, h1);
+          x.fillStyle = up(Math.min(0.9, e[1] / s.mxs)); x.fillRect(mid, yT, w / 2, h1);
+        }
+        if ((im === 2 || im === -2) && rh >= 3) { x.fillStyle = im > 0 ? C.up : C.dn; x.fillRect(im > 0 ? x0 + w - 2 : x0, yT, 2, h1); }
+        if (I.poc && k === s.poc && rh >= 3) { x.strokeStyle = C.ac; x.lineWidth = 1; x.strokeRect(x0 + 0.5, yT + 0.5, w - 1, h1 - 1); }
+        if (srch && tot >= srch) { x.strokeStyle = '#fff'; x.lineWidth = 1.5; x.strokeRect(x0 + 1, yT + 1, w - 2, Math.max(1, h1 - 2)); }
+      }
+      x.fillStyle = 'rgba(255,255,255,.28)'; x.fillRect(bx + 7, Y(s.vah + g), 1, Y(s.val) - Y(s.vah + g));
+    }
+    /* VWAP del día, bandas y medias */
+    const path = (arr, off, col, lw, dash) => {
+      x.strokeStyle = col; x.lineWidth = lw; x.setLineDash(dash || []); x.beginPath(); let f = 1;
+      for (let i = iLo; i <= iHi; i++) {
+        if (arr === vw && i && Math.floor(A[i].t0 / 864e5) !== Math.floor(A[i - 1].t0 / 864e5)) f = 1;
+        const px = X(i) + v.barW / 2, py = Y(arr[i] + (off ? off * sd[i] : 0) + 0.5); if (f) { x.moveTo(px, py); f = 0; } else x.lineTo(px, py);
+      }
+      x.stroke(); x.setLineDash([]);
+    };
+    if (I.bands) for (const m of [-2, -1, 1, 2]) path(vw, m, 'rgba(232,236,243,.22)', 1, [3, 3]);
+    if (I.vwap) path(vw, 0, 'rgba(232,236,243,.75)', 1.25);
+    if (I.ema1) path(e1, 0, '#f0b35e', 1.25);
+    if (I.ema2) path(e2, 0, '#b58cff', 1.25);
+    /* trades grandes */
+    if (I.big && v.barW >= 6) {
+      const tMin = A[iLo].t0, bigMin = sym.big * Math.max(1, +cfg.bigX || 1);
+      for (let j = bigs.length - 1; j >= 0; j--) {
+        const b = bigs[j]; if (b.t > tNow || b.q < bigMin) continue; if (b.t < tMin) break;
+        const a = idxAt(A, b.t); if (a > iHi) continue;
+        const r = Math.max(2.5, Math.min(Math.max(4, v.barW * 0.42), Math.sqrt(b.q / bigMin) * (cells ? 5 : 3)));
+        x.beginPath(); x.arc(X(a) + v.barW / 2 + (cells ? 4 : 0), Y(b.pv / b.q + 0.5), r, 0, 6.2832);
+        x.fillStyle = b.s ? dn(0.18) : up(0.18); x.fill(); x.strokeStyle = b.s ? C.dn : C.up; x.lineWidth = 1.25; x.stroke();
+      }
+    }
+    /* posición simulada */
+    if (sim.pos) {
+      hline(x, Y(sim.avg + 0.5), cw, C.ac, [], 'ENTRADA ' + (sim.pos > 0 ? '+' : '') + +sim.pos.toFixed(4));
+      for (const [k, col, nm] of [['sl', C.dn, 'STOP'], ['tp', C.up, 'OBJETIVO']]) if (sim[k] != null) {
+        const pl = (sim[k] - sim.avg) * sym.tick * sim.pos;
+        hline(x, Y(sim[k] + 0.5), cw, col, [5, 3], nm + ' ' + fp(sim[k]) + '   ' + (pl >= 0 ? '+' : '') + pl.toFixed(2) + (grab === k ? '' : '   arrastra para mover'));
+      }
+    }
+    for (const d of D) drawD(x, d);
+    if (draft) drawD(x, draft); if (ruler) drawD(x, ruler);
+    x.restore();
+
+    /* eje de precio */
+    x.font = '11px ' + MONO; x.textAlign = 'left'; x.fillStyle = C.mut;
+    for (let k = Math.ceil(kBot / stepK) * stepK; k <= kTop; k += stepK) { const y = num ? Y(k) - rh / 2 : Y(k); if (y > 6 && y < ch - 6) x.fillText(fp(k), cw + 6, y); }
+    const yl = Y(eng.last + 0.5);
+    if (yl > 0 && yl < ch) {
+      tag(x, cw, yl, fp(eng.last), eng.lastS ? C.dn : C.up);
+      if (isT && !rep) { const r = Math.max(0, last.t0 + size - (Date.now() - skew)), s = Math.floor(r / 1000); x.fillStyle = C.mut; x.font = '10px ' + MONO; x.fillText(s >= 3600 ? Math.floor(s / 3600) + ':' + p2(Math.floor(s / 60) % 60) + ':' + p2(s % 60) : p2(Math.floor(s / 60)) + ':' + p2(s % 60), cw + 6, yl + 15); }
+    }
+
+    /* panel inferior: delta por barra, CVD y estadística de clusters */
+    x.fillStyle = C.line; x.fillRect(0, ch, W, 1); x.fillRect(cw, 0, 1, H - TB);
+    const dh = 56, zy = ch + 3 + dh / 2;
+    let md = 1e-9, mvv = 1e-9, c0 = Infinity, c1 = -Infinity;
+    for (let i = iLo; i <= iHi; i++) { const b = A[i]; md = Math.max(md, Math.abs(b.buy - b.sell)); mvv = Math.max(mvv, b.vol); if (cv[i] < c0) c0 = cv[i]; if (cv[i] > c1) c1 = cv[i]; }
+    x.save(); x.beginPath(); x.rect(0, ch, cw, ST + TB); x.clip();
+    x.fillStyle = C.line; x.fillRect(0, zy, cw, 1);
+    const stepL = Math.max(1, Math.ceil(84 / v.barW)), bigTF = size >= 3600000 && isT;
+    const ROWS = ['VOL', 'DELTA', 'DELTA %', 'MÁX Δ', 'MÍN Δ', 'TRADES'], ty0 = ch + dh + 8;
+    for (let i = iHi; i >= iLo; i--) {
+      const b = A[i], bx = X(i), d = b.buy - b.sell, hh = Math.max(1, Math.abs(d) / md * (dh / 2 - 3)), bw = Math.max(1, v.barW > 4 ? v.barW - (cells ? 6 : 1.5) : v.barW);
+      x.fillStyle = d >= 0 ? up(0.75) : dn(0.75); x.fillRect(bx + (v.barW - bw) / 2, d >= 0 ? zy - hh : zy, bw, hh);
+      if (statsOn) {
+        const dp = b.vol ? d / b.vol * 100 : 0;
+        const cl = [[fv(b.vol), bl(0.05 + b.vol / mvv * 0.4)], [fs(d), d >= 0 ? up(0.08 + Math.abs(d) / md * 0.45) : dn(0.08 + Math.abs(d) / md * 0.45)], [(dp >= 0 ? '+' : '') + dp.toFixed(0) + '%', dp >= 0 ? up(Math.min(0.5, Math.abs(dp) / 80)) : dn(Math.min(0.5, Math.abs(dp) / 80))],
+          [b.lv ? fs(b.dmax) : '·', b.lv ? up(0.05 + b.dmax / md * 0.3) : 'transparent'], [b.lv ? fs(b.dmin) : '·', b.lv ? dn(0.05 - b.dmin / md * 0.3) : 'transparent'], [b.n >= 1000 ? (b.n / 1000).toFixed(1) + 'k' : '' + b.n, 'rgba(255,255,255,.04)']];
+        x.textAlign = 'center'; x.font = '10px ' + MONO;
+        for (let r = 0; r < 6; r++) { x.fillStyle = cl[r][1]; x.fillRect(bx + 1, ty0 + r * 14, v.barW - 2, 13); x.fillStyle = 'rgba(232,236,243,.85)'; x.fillText(cl[r][0], bx + v.barW / 2, ty0 + r * 14 + 7); }
+      }
+      if (i % stepL === 0) { x.fillStyle = C.mut; x.textAlign = 'center'; x.font = '10px ' + MONO; x.fillText(bigTF ? fd(b.t0) : ft(b.t0, !isT || size < 60000), bx + v.barW / 2, H - TB / 2); }
+    }
+    x.strokeStyle = C.ac; x.lineWidth = 1.5; x.beginPath();
+    for (let i = iLo; i <= iHi; i++) { const px = X(i) + v.barW / 2, py = ch + 6 + (c1 - cv[i]) / ((c1 - c0) || 1) * (dh - 8); i === iLo ? x.moveTo(px, py) : x.lineTo(px, py); }
+    x.stroke(); x.restore();
+    x.textAlign = 'left'; x.font = '9px ' + MONO; x.fillStyle = C.ac; x.fillText('CVD ' + fs(cv[nb - 1]), cw + 6, ch + 12);
+    x.fillStyle = C.mut; x.fillText('DELTA', cw + 6, ch + dh - 6);
+    if (statsOn) for (let r = 0; r < 6; r++) x.fillText(ROWS[r], cw + 6, ty0 + r * 14 + 7);
+
+    /* cursor y lectura */
+    let ri = nb - 1;
+    if (mouse && mouse.v === 'fp' && mouse.x < cw) {
+      x.fillStyle = 'rgba(255,255,255,.18)'; x.fillRect(mouse.x, 0, 1, H - TB);
+      if (mouse.y < ch) { x.fillRect(0, mouse.y, cw, 1); tag(x, cw, mouse.y, fp(Math.floor(v.cK + (ch / 2 - mouse.y) / rh * g)), '#1a2230', C.tx); }
+      const i = nb - Math.ceil((xR + v.offX - mouse.x) / v.barW); if (i >= 0 && i < nb) ri = i;
+    }
+    const rb = A[ri], d = rb.buy - rb.sell;
+    $('read').innerHTML = `<b>${sym.id}</b> ${bigTF ? fd(rb.t0) : ft(rb.t0, 1)} &nbsp; A <b>${fp(rb.o)}</b> M <b>${fp(rb.h)}</b> m <b>${fp(rb.l)}</b> C <b>${fp(rb.c)}</b> &nbsp; Vol <b>${fv(rb.vol)}</b> &nbsp; Delta <b class="${d >= 0 ? 'u' : 'd'}">${fs(d)}</b>` +
+      (rb.lv ? ` &nbsp; POC <b>${fp(eng.stats(rb).poc)}</b>` : '') + ` &nbsp; Trades <b>${rb.n}</b> &nbsp; VWAP <b>${fp(Math.round(vw[ri]))}</b> &nbsp; ${nb.toLocaleString('es-MX')} barras · ${rb.lv ? 'tick a tick' : 'vela del exchange'}`;
+  }
+
+  /* ---------- DIBUJOS: línea horizontal, tendencia, zona, regla ---------- */
+  const DKEY = () => 'npd.draw.' + ses.email + '.' + sym.id;
+  function loadDraw() { try { D = JSON.parse(localStorage.getItem(DKEY())) || []; } catch (e) { D = []; } }
+  function saveDraw() { if (!DEMO) try { localStorage.setItem(DKEY(), JSON.stringify(D)); } catch (e) {} }
+  function ptAt(m) { // pixel → { tiempo, precio en ticks }
+    const A = G.A, nb = G.nb, i = nb + Math.floor((m.x - G.xR - v.offX) / v.barW), lastB = A[nb - 1], sz = eng.o.type === 'time' ? eng.o.size : 0;
+    return { t: i < 0 ? A[0].t0 : i < nb ? A[i].t0 : lastB.t0 + (i - nb + 1) * sz, p: v.cK + (G.ch / 2 - m.y) / G.rh * G.g - 0.5 };
+  }
+  function xOf(t) {
+    const A = G.A, nb = G.nb; let i = idxAt(A, t); const lastB = A[nb - 1];
+    if (t > lastB.t0 && eng.o.type === 'time') i = nb - 1 + Math.round((t - lastB.t0) / eng.o.size);
+    return G.xR - (nb - i) * v.barW + v.offX + v.barW / 2;
+  }
+  const yOf = p => G.ch / 2 - (p + 0.5 - v.cK) / G.g * G.rh;
+  function drawD(x, d) {
+    const col = '#f0b35e';
+    if (d.type === 'h') { hline(x, yOf(d.p1), G.cw, col, [], fp(Math.round(d.p1)), true); return; }
+    const xa = xOf(d.t1), xb = xOf(d.t2), ya = yOf(d.p1), yb = yOf(d.p2);
+    if (d.type === 'line') { x.strokeStyle = col; x.lineWidth = 1.5; x.beginPath(); x.moveTo(xa, ya); x.lineTo(xb, yb); x.stroke(); return; }
+    const rx = Math.min(xa, xb), ry = Math.min(ya, yb), rw = Math.abs(xb - xa), rhh = Math.abs(yb - ya);
+    if (d.type === 'rect') { x.fillStyle = 'rgba(240,179,94,.1)'; x.fillRect(rx, ry, rw, rhh); x.strokeStyle = 'rgba(240,179,94,.7)'; x.lineWidth = 1; x.strokeRect(rx + 0.5, ry + 0.5, rw, rhh); return; }
+    /* regla: mide precio, %, barras, tiempo y el volumen y delta negociados en el tramo */
+    const A = G.A, ia = Math.min(idxAt(A, d.t1), idxAt(A, d.t2)), ib = Math.max(idxAt(A, d.t1), idxAt(A, d.t2)); let vol = 0, del = 0;
+    for (let i = ia; i <= ib; i++) { vol += A[i].vol; del += A[i].buy - A[i].sell; }
+    const dp = d.p2 - d.p1, upw = dp >= 0;
+    x.fillStyle = upw ? up(0.12) : dn(0.12); x.fillRect(rx, ry, rw, rhh); x.strokeStyle = upw ? C.up : C.dn; x.lineWidth = 1; x.strokeRect(rx + 0.5, ry + 0.5, rw, rhh);
+    const L = [`${upw ? '+' : ''}${(dp * sym.tick).toFixed(sym.dec)}  (${upw ? '+' : ''}${(dp / d.p1 * 100).toFixed(2)}%)`, `${ib - ia + 1} barras · ${fdur(Math.abs(d.t2 - d.t1))}`, `Vol ${fv(vol)} · Delta ${fs(del)}`];
+    x.font = '11px ' + MONO; const bw = Math.max(...L.map(s => x.measureText(s).width)) + 16, bx = Math.min(G.cw - bw - 4, Math.max(4, rx + rw / 2 - bw / 2)), by = Math.max(4, ry - 54);
+    x.fillStyle = '#10161f'; x.fillRect(bx, by, bw, 50); x.strokeStyle = 'rgba(255,255,255,.14)'; x.strokeRect(bx + 0.5, by + 0.5, bw, 50);
+    x.textAlign = 'left'; x.fillStyle = C.tx; L.forEach((s, i) => x.fillText(s, bx + 8, by + 11 + i * 15));
+  }
+  function hitD(m) {
+    for (let i = D.length - 1; i >= 0; i--) {
+      const d = D[i];
+      if (d.type === 'h') { if (Math.abs(yOf(d.p1) - m.y) < 5) return i; continue; }
+      const xa = xOf(d.t1), xb = xOf(d.t2), ya = yOf(d.p1), yb = yOf(d.p2);
+      if (d.type === 'rect') { if (m.x > Math.min(xa, xb) - 4 && m.x < Math.max(xa, xb) + 4 && m.y > Math.min(ya, yb) - 4 && m.y < Math.max(ya, yb) + 4) return i; continue; }
+      const L2 = (xb - xa) ** 2 + (yb - ya) ** 2, tt = L2 ? Math.max(0, Math.min(1, ((m.x - xa) * (xb - xa) + (m.y - ya) * (yb - ya)) / L2)) : 0;
+      if (Math.hypot(m.x - (xa + tt * (xb - xa)), m.y - (ya + tt * (yb - ya))) < 5) return i;
+    }
+    return -1;
+  }
+  function setTool(t) { tool = t; for (const b of $('tools').querySelectorAll('[data-t]')) b.classList.toggle('on', b.dataset.t === t); $('fp').style.cursor = t === 'cur' ? '' : 'copy'; }
+
+  /* ---------- HEATMAP DE LIQUIDEZ (vista propia) ---------- */
   function drawHM() {
     const c = $('hm'), x = fit(c), W = c.clientWidth, H = c.clientHeight; x.clearRect(0, 0, W, H);
     const AX = 68, TB = 18, NP = 74, ch = H - TB, cw = W - AX, hg = sym.hg;
@@ -258,27 +493,13 @@
     const Y = p => ch / 2 - (p - hv.cK) / hg * hv.rowPx;
     if (hv.follow) { const yl = Y(eng.last); if (yl < ch * 0.2 || yl > ch * 0.8) hv.cK = eng.last; }
     const xN = cw - NP, Xt = t => xN - (hv.tR - t) / 1000 * hv.pps, tL = hv.tR - xN / hv.pps * 1000;
-    const iw = Math.max(1, xN | 0), ih = Math.max(1, ch | 0);
-    if (!off || off.width !== iw || off.height !== ih) { off = document.createElement('canvas'); off.width = iw; off.height = ih; img = off.getContext('2d').createImageData(iw, ih); rowOf = new Int32Array(ih); }
+    const iw = Math.max(1, xN | 0), ih = Math.max(1, ch | 0), tx = new Float64Array(iw), rowOf = new Int32Array(ih);
     for (let y = 0; y < ih; y++) rowOf[y] = Math.floor((hv.cK + (ch / 2 - y - 0.5) / hv.rowPx * hg) / hg);
-    const d = new Uint32Array(img.data.buffer); d.fill(0);
-    const sc = 255 / (hv.ref * 1.6) * +$('con').value;
-    let j = 0; { let a = 0, b = heat.length - 1; while (a < b) { const m = (a + b + 1) >> 1; if (heat[m].t <= tL) a = m; else b = m - 1; } j = a; }
-    for (let px = 0; px < iw; px++) {
-      const t = hv.tR - (xN - px - 0.5) / hv.pps * 1000;
-      while (j + 1 < heat.length && heat[j + 1].t <= t) j++;
-      const col = heat[j]; if (col.t > t || t - col.t > 3000) continue;
-      const a = col.a, b = col.base;
-      for (let y = 0; y < ih; y++) {
-        const q = a[rowOf[y] - b];
-        if (q > 0) { let u = (q * sc) | 0; if (u > 255) u = 255; d[y * iw + px] = LUT[u]; }
-      }
-    }
-    off.getContext('2d').putImageData(img, 0, 0); x.drawImage(off, 0, 0, iw, ih);
+    for (let px = 0; px < iw; px++) tx[px] = hv.tR - (xN - px - 0.5) / hv.pps * 1000;
+    paintHeat('hm', x, iw, ih, tx, rowOf, 1);
 
     x.save(); x.beginPath(); x.rect(0, 0, xN, ch); x.clip();
-    /* mejor bid / ask en el tiempo */
-    for (const side of [0, 1]) {
+    for (const side of [0, 1]) { // mejor bid / ask en el tiempo
       x.strokeStyle = side ? dn(0.75) : up(0.75); x.lineWidth = 1; x.beginPath(); let f = 1;
       for (let i = j0(tL); i < heat.length; i++) {
         const col = heat[i], px = Xt(col.t), py = Y((side ? col.ba : col.bb) + 0.5);
@@ -286,8 +507,7 @@
       }
       x.stroke();
     }
-    /* trades agresores como burbujas (tamaño = volumen) */
-    const bms = Math.max(100, 2500 / hv.pps); let key = -1, ac = [null, null];
+    const bms = Math.max(100, 2500 / hv.pps); let key = -1, ac = [null, null]; // trades agresores como burbujas
     const flush = () => {
       for (const a of ac) {
         if (!a || a.q < sym.big * 0.03) continue;
@@ -305,15 +525,13 @@
     }
     flush(); x.restore();
 
-    /* libro actual a la derecha */
     x.fillStyle = C.line; x.fillRect(xN, 0, 1, ch); x.fillRect(cw, 0, 1, ch); x.fillRect(0, ch, W, 1);
     let mq = 1e-9; const r0 = Math.floor((hv.cK - ch / 2 / hv.rowPx * hg) / hg), r1 = Math.floor((hv.cK + ch / 2 / hv.rowPx * hg) / hg);
     for (let r = r0; r <= r1; r++) { const q = lt.a[r - lt.base]; if (q > mq) mq = q; }
-    for (let r = r0; r <= r1; r++) {
+    for (let r = r0; r <= r1; r++) { // libro actual a la derecha
       const q = lt.a[r - lt.base]; if (!(q > 0)) continue;
       x.fillStyle = r * hg <= lt.bb ? up(0.55) : dn(0.55); x.fillRect(xN + 3, Y((r + 1) * hg), q / mq * (NP - 8), Math.max(1, hv.rowPx - 0.5));
     }
-    /* ejes */
     const stepK = hg * Math.ceil(24 / hv.rowPx), kT = hv.cK + ch / 2 / hv.rowPx * hg, kB = hv.cK - ch / 2 / hv.rowPx * hg;
     x.fillStyle = C.mut; x.textAlign = 'left';
     for (let k = Math.ceil(kB / stepK) * stepK; k <= kT; k += stepK) { const y = Y(k + hg / 2); if (y > 6 && y < ch - 6) x.fillText(fp(k), cw + 6, y); }
@@ -322,17 +540,16 @@
     x.textAlign = 'center'; x.fillStyle = C.mut;
     for (let t = Math.ceil(tL / (stepS * 1000)) * stepS * 1000; t <= hv.tR; t += stepS * 1000) x.fillText(ft(t, 1), Xt(t), H - TB / 2);
 
-    let txt = `<b>${sym.id}</b> liquidez en reposo · fila ${(hg * sym.tick).toFixed(sym.dec)} · foto cada ${HMS} ms · ${heat.length} columnas`;
+    let txt = `<b>${sym.id}</b> liquidez en reposo · fila ${(hg * sym.tick).toFixed(sym.dec)} · foto cada ${HMS} ms · ${fdur(heat.length * HMS)} guardados`;
     if (mouse && mouse.v === 'hm' && mouse.x < xN && mouse.y < ch) {
       x.fillStyle = 'rgba(255,255,255,.18)'; x.fillRect(0, mouse.y, cw, 1); x.fillRect(mouse.x, 0, 1, ch);
       const p = Math.floor(hv.cK + (ch / 2 - mouse.y) / hv.rowPx * hg), t = hv.tR - (xN - mouse.x) / hv.pps * 1000;
       tag(x, cw, mouse.y, fp(p), '#1a2230', C.tx);
-      let i = j0(t); const col = heat[i], q = col && col.t <= t ? col.a[Math.floor(p / hg) - col.base] || 0 : 0;
+      const col = heat[j0(t)], q = col && col.t <= t ? col.a[Math.floor(p / hg) - col.base] || 0 : 0;
       txt = `<b>${sym.id}</b> ${ft(t, 1)} &nbsp; precio <b>${fp(Math.floor(p / hg) * hg)}</b> &nbsp; liquidez <b>${fv(q)}</b>`;
     }
     $('read').innerHTML = txt;
   }
-  function j0(t) { let a = 0, b = heat.length - 1; while (a < b) { const m = (a + b + 1) >> 1; if (heat[m].t <= t) a = m; else b = m - 1; } return a; }
 
   /* ---------- LIBRO (DOM) + CINTA + ESTADO ---------- */
   function drawDOM() {
@@ -344,7 +561,7 @@
     for (const [k, q] of feed.asks) { const r = Math.floor(k / g) * g; A.set(r, (A.get(r) || 0) + q); }
     const lk = Math.floor(eng.last / g) * g;
     if (domC == null || domC % g || Math.abs(lk - domC) / g > rows * 0.3) domC = lk;
-    const top = domC + Math.floor(rows / 2) * g, pw = Math.round(W * 0.18), PC = 74, cwd = (W - pw - PC) / 2, xb = pw, xp = pw + cwd, xa = xp + PC;
+    const top = domC + Math.floor(rows / 2) * g, pw = Math.round(W * 0.18), PC = 74, cwd = (W - pw - PC) / 2, xp = pw + cwd, xa = xp + PC;
     let mq = 1e-9, mp = 1e-9;
     for (let r = 0; r < rows; r++) { const k = top - r * g; mq = Math.max(mq, B.get(k) || 0, A.get(k) || 0); const e = eng.prof.get(k); if (e) mp = Math.max(mp, e[0] + e[1]); }
     x.textBaseline = 'middle'; x.font = '11px ' + MONO;
@@ -367,93 +584,145 @@
     $('sSL').textContent = sim.sl != null ? fp(sim.sl) : '-'; $('sTP').textContent = sim.tp != null ? fp(sim.tp) : '-';
     $('sOpen').textContent = sg(pl); $('sOpen').className = pl >= 0 ? 'u' : 'd'; $('sReal').textContent = sg(sim.real); $('sReal').className = sim.real >= 0 ? 'u' : 'd';
     const isLive = st === 'en vivo' && feed && feed.bookOk, e = $('st');
+    if (isLive && !feed.deepOn) { feed.deepOn = true; feed.deepen(feed.until); } // ya en vivo: empieza a traer historia tick a tick hacia atrás
     e.className = 'chip ' + (isLive ? 'ok' : st === 'reconectando' ? 'bad' : '');
-    e.innerHTML = `<i></i>${isLive ? 'EN VIVO' : st} · ${Math.round(stat.lat)} ms · ${stat.tps}/s · ${live.n.toLocaleString('es-MX')} trades` +
+    e.innerHTML = `<i></i>${isLive ? 'EN VIVO' : st} · ${Math.round(stat.lat)} ms · ${stat.tps}/s · ticks ${live.firstT ? fdur((live.lastT || 0) - live.firstT) : '0'}${feed && feed.deep ? ' y cargando' : ''}` +
       (feed && (feed.gaps || feed.resyncs) ? ` · ${feed.gaps} huecos recuperados · ${feed.resyncs} resync` : '') + (feed && feed.lost ? ` · ${feed.lost} PERDIDOS` : '');
+    if (view === 'fp' && !rep) dirty = true; // la cuenta regresiva de la vela
   }
 
   /* ---------- AUDITORÍA contra la vela oficial del exchange ---------- */
   async function runAudit() {
-    if (!feed || !feed.ready || live.firstT == null) return;
+    if (!feed || !feed.ready || !live || live.firstT == null) return;
     const f = feed; let kl; try { kl = await f.klines(15); } catch (e) { return; }
     if (f !== feed) return;
     const now = Math.max(f.bookT || 0, live.lastT || 0), rows = [];
+    const k0 = live.mins.keys().next().value; // mi primer minuto: su borde con lo anterior no se puede comparar
     for (const k of kl) {
-      /* el primer minuto cargado no se audita: su borde con el minuto anterior no se puede comprobar */
-      if (k.t + 60000 + 3000 > now || k.t < Math.ceil(live.firstT / 60000) * 60000 + 60000) continue;
-      const m = live.mins.get(k.t) || { v: 0, b: 0 };
+      if (k.t + 60000 + 3000 > now || !live.mins.has(k.t) || k.t <= k0) continue;
+      const m = live.mins.get(k.t);
       rows.push({ t: k.t, v: m.v, b: m.b, ov: k.v, ob: k.b, ok: m.v === k.v && m.b === k.b });
     }
-    /* un trade agregado que cruza el cambio de minuto: lo que le sobra a un minuto le falta al siguiente (no se perdió nada) */
-    for (let i = 0; i + 1 < rows.length; i++) {
-      const a = rows[i], b = rows[i + 1];
-      if (!a.ok && !b.ok && !a.edge && a.v - a.ov + b.v - b.ov === 0 && a.b - a.ob + b.b - b.ob === 0) a.edge = b.edge = true;
-    }
-    const good = rows.filter(r => r.ok || r.edge).length, ed = rows.filter(r => r.edge).length;
-    audit = { rows, n: rows.length, ok: good };
+    /* La prueba de que no falta ningún trade es la secuencia de ids (consecutiva, sin huecos).
+       La comparación por minuto puede diferir sin que falte nada: un trade agregado que empieza en un minuto
+       y termina en el siguiente yo lo cuento en el primero y el exchange reparte sus partes entre los dos. */
+    const good = rows.filter(r => r.ok).length, lost = f.lost || 0;
+    audit = { rows, n: rows.length, ok: good, lost, gaps: f.gaps };
     const e = $('aud');
-    e.className = 'chip ' + (!rows.length ? '' : good === audit.n ? 'ok' : 'bad');
-    e.innerHTML = `<i></i>` + (rows.length ? `Auditoría ${good}/${audit.n} min sin pérdida` + (ed ? ` · ${ed / 2} cruce` : '') : 'Auditoría: esperando 1er minuto');
+    e.className = 'chip ' + (!rows.length ? '' : lost ? 'bad' : 'ok');
+    e.innerHTML = `<i></i>` + (rows.length ? `Auditoría · ${lost} trades perdidos · ${good}/${rows.length} min exactos` : 'Auditoría: esperando minutos completos');
     if ($('audP').style.display === 'block') showAudit();
   }
   function showAudit() {
     const u = n => (n / 1e6).toFixed(3);
-    $('audP').innerHTML = `<h4>Auditoría de precisión</h4><p>Cada minuto cerrado comparo MI suma de trades contra la vela oficial del exchange: volumen total y volumen de compra agresora (de ahí sale el delta). Si coincide al milésimo, no se perdió ni un trade.</p>
+    $('audP').innerHTML = `<h4>Auditoría de precisión</h4><p><b style="color:var(--tx)">Secuencia de ids:</b> cada trade trae un número consecutivo. Huecos detectados y recuperados: ${audit.gaps || 0} · trades perdidos: <b class="${audit.lost ? 'd' : 'u'}">${audit.lost || 0}</b>.</p>
+      <p><b style="color:var(--tx)">Contra la vela oficial:</b> mi volumen y mi compra agresora por minuto. Cuando un trade agregado cruza el cambio de minuto, lo que le sobra a un minuto le falta al vecino: eso es "cruce", no pérdida.</p>
       <table><tr><th>Minuto</th><th>Mi vol</th><th>Oficial</th><th>Mi compra</th><th>Oficial</th><th></th></tr>` +
-      audit.rows.slice().reverse().map(r => `<tr><td>${ft(r.t)}</td><td>${u(r.v)}</td><td>${u(r.ov)}</td><td>${u(r.b)}</td><td>${u(r.ob)}</td><td class="${r.ok || r.edge ? 'u' : 'd'}">${r.ok ? 'exacto' : r.edge ? 'cruce ' + u(r.v - r.ov) : 'dif ' + u(r.v - r.ov)}</td></tr>`).join('') +
-      `</table>` + (audit.rows.length ? '' : '<p>Aún no cierra el primer minuto completo.</p>');
+      audit.rows.slice().reverse().map(r => `<tr><td>${ft(r.t)}</td><td>${u(r.v)}</td><td>${u(r.ov)}</td><td>${u(r.b)}</td><td>${u(r.ob)}</td><td class="${r.ok ? 'u' : ''}">${r.ok ? 'exacto' : 'cruce ' + (r.v - r.ov > 0 ? '+' : '') + u(r.v - r.ov)}</td></tr>`).join('') +
+      `</table>` + (audit.rows.length ? '' : '<p>Aún no cierran dos minutos completos.</p>');
   }
 
-  /* ---------- eventos ---------- */
+  /* ---------- eventos del gráfico ---------- */
+  function hit(m) { // ¿el cursor está sobre la línea de stop u objetivo?
+    if (!sim.pos || m.x > G.cw || m.y > G.ch) return null;
+    for (const k of ['sl', 'tp']) if (sim[k] != null && Math.abs(yOf(sim[k]) - m.y) < 6) return k;
+    return null;
+  }
   function wire(id, name) {
     const c = $(id); let drag = null;
     c.addEventListener('mousemove', e => {
       const r = c.getBoundingClientRect(); mouse = { v: name, x: e.clientX - r.left, y: e.clientY - r.top };
-      if (name === 'fp') {
-        if (grab) { sim[grab] = Math.round(v.cK + (geo.ch / 2 - mouse.y) / v.rowH * eng.o.group - 0.5); dirty = true; return; }
-        c.style.cursor = hit(mouse) ? 'ns-resize' : '';
+      if (name === 'fp' && G.nb) {
+        if (draft) { const p = ptAt(mouse); draft.t2 = p.t; draft.p2 = p.p; dirty = true; return; }
+        if (grab) { sim[grab] = Math.round(v.cK + (G.ch / 2 - mouse.y) / G.rh * G.g - 0.5); dirty = true; return; }
+        if (tool === 'cur') c.style.cursor = hit(mouse) ? 'ns-resize' : '';
       }
       if (drag) {
         const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag = { x: e.clientX, y: e.clientY };
-        if (name === 'fp') { v.offX += dx; v.cK += dy / v.rowH * eng.o.group; v.follow = false; }
-        else { hv.tR -= dx / hv.pps * 1000; hv.cK += dy / hv.rowPx * sym.hg; hv.follow = false; }
+        if (name === 'fp') {
+          v.offX += dx; v.follow = false;
+          if (v.barW >= 64 || !v.autoY) v.cK += dy / v.rh * eng.o.group;
+        } else { hv.tR -= dx / hv.pps * 1000; hv.cK += dy / hv.rowPx * sym.hg; hv.follow = false; }
         $('fol').style.borderColor = C.ac;
       }
       dirty = true;
     });
-    c.addEventListener('mousedown', e => { if (name === 'fp' && mouse && (grab = hit(mouse))) return; drag = { x: e.clientX, y: e.clientY }; });
-    window.addEventListener('mouseup', () => { drag = null; grab = null; dirty = true; });
+    c.addEventListener('mousedown', e => {
+      if (e.button) return;
+      if (name === 'fp' && mouse && G.nb && mouse.x < G.cw && mouse.y < G.ch) {
+        if (tool !== 'cur') {
+          const p = ptAt(mouse);
+          if (tool === 'h') { D.push({ type: 'h', p1: p.p }); saveDraw(); setTool('cur'); dirty = true; return; }
+          ruler = null; draft = { type: tool, t1: p.t, p1: p.p, t2: p.t, p2: p.p }; return;
+        }
+        if ((grab = hit(mouse))) return;
+        ruler = null;
+      }
+      drag = { x: e.clientX, y: e.clientY };
+    });
+    window.addEventListener('mouseup', () => {
+      if (name === 'fp' && draft) { if (draft.type === 'ruler') ruler = draft; else if (draft.t1 !== draft.t2 || draft.p1 !== draft.p2) { D.push(draft); saveDraw(); } draft = null; setTool('cur'); }
+      drag = null; grab = null; dirty = true;
+    });
     c.addEventListener('mouseleave', () => { mouse = null; dirty = true; });
     c.addEventListener('dblclick', follow);
+    c.addEventListener('contextmenu', e => { // clic derecho sobre un dibujo: lo borra
+      if (name !== 'fp' || !mouse) return; e.preventDefault(); ruler = null;
+      const i = hitD(mouse); if (i >= 0) { D.splice(i, 1); saveDraw(); } dirty = true;
+    });
     c.addEventListener('wheel', e => {
-      e.preventDefault(); const f = e.deltaY < 0 ? 1.1 : 1 / 1.1, onAxis = e.shiftKey || e.ctrlKey || (mouse && mouse.x > c.clientWidth - 68);
-      if (name === 'fp') { if (onAxis) v.rowH = Math.max(2, Math.min(40, v.rowH * f)); else v.barW = Math.max(3, Math.min(260, v.barW * f)); }
-      else { if (onAxis) hv.rowPx = Math.max(1, Math.min(24, hv.rowPx * f)); else hv.pps = Math.max(0.5, Math.min(80, hv.pps * f)); }
+      e.preventDefault(); const f = e.deltaY < 0 ? 1.12 : 1 / 1.12, onAxis = e.shiftKey || e.ctrlKey || (mouse && mouse.x > c.clientWidth - 68);
+      if (name === 'fp') {
+        if (onAxis) { v.autoY = false; v.rh = v.rowH = Math.max(0.02, Math.min(40, v.rh * f)); }
+        else {
+          const nw = Math.max(1, Math.min(260, v.barW * f));
+          if (v.offX !== 0 && mouse) { const rel = (mouse.x - G.xR - v.offX) / v.barW; v.offX = mouse.x - G.xR - rel * nw; } // zoom anclado a la barra bajo el cursor
+          v.barW = nw; zoomUI();
+        }
+      } else { if (onAxis) hv.rowPx = Math.max(1, Math.min(24, hv.rowPx * f)); else hv.pps = Math.max(0.5, Math.min(80, hv.pps * f)); }
       dirty = true;
     }, { passive: false });
   }
-  function hit(m) { // ¿el cursor está sobre la línea de stop u objetivo?
-    if (!sim.pos || m.x > geo.cw || m.y > geo.ch) return null;
-    for (const k of ['sl', 'tp']) if (sim[k] != null && Math.abs(geo.ch / 2 - (sim[k] + 0.5 - v.cK) / eng.o.group * v.rowH - m.y) < 6) return k;
-    return null;
-  }
-  function follow() { v.follow = hv.follow = true; v.offX = 0; v.cK = hv.cK = eng.last; $('fol').style.borderColor = ''; dirty = true; }
+  function follow() { v.follow = hv.follow = true; v.autoY = true; v.rowH = 16; v.offX = 0; v.cK = hv.cK = eng.last; $('fol').style.borderColor = ''; dirty = true; }
+  function zoomUI() { for (const b of $('zoom').children) b.classList.toggle('on', +b.dataset.w === (v.barW < 18 ? 7 : v.barW < 64 ? 30 : 96)); }
 
-  $('symSel').onchange = e => { sym = SY.find(s => s.id === e.target.value); fillSel(); saveCfg(); start(); };
-  $('histSel').onchange = () => { saveCfg(); start(); };
-  for (const id of ['barSel', 'grpSel', 'imbSel']) $(id).onchange = () => { saveCfg(); live.set(barCfg()); if (rep) rep.eng.set(barCfg()); v.offX = 0; domC = null; dirty = true; };
+  $('symSel').onchange = e => { sym = SY.find(s => s.id === e.target.value); cfg.sym = sym.id; saveCfg(); fillSel(); start(); };
+  $('barSel').onchange = () => { cfg.bar = $('barSel').value; saveCfg(); live.set(barCfg()); if (rep) rep.eng.set(barCfg()); v.offX = 0; v.autoY = true; loadHist(); dirty = true; };
+  for (const id of ['grpSel', 'imbSel']) $(id).onchange = () => { cfg.imb = $('imbSel').value; saveCfg(); live.set(barCfg()); if (rep) rep.eng.set(barCfg()); domC = null; dirty = true; };
+  $('modeSel').onchange = e => { cfg.mode = e.target.value; saveCfg(); dirty = true; };
+  $('depSel').onchange = e => { cfg.dep = e.target.value; saveCfg(); start(); };
   $('tapeMin').onchange = e => { tapeMin = +e.target.value; tape = []; };
   $('con').oninput = () => { dirty = true; };
   $('fol').onclick = follow;
+  $('zoom').onclick = e => { const b = e.target.closest('button'); if (!b) return; v.barW = +b.dataset.w; v.offX = 0; v.autoY = true; v.rowH = 16; v.follow = true; zoomUI(); dirty = true; };
+  $('tools').onclick = e => { const b = e.target.closest('[data-t]'); if (b) setTool(b.dataset.t); };
+  $('delAll').onclick = () => { D = []; ruler = null; saveDraw(); dirty = true; };
+  window.addEventListener('keydown', e => { if (e.key === 'Escape') { draft = ruler = null; setTool('cur'); dirty = true; } });
   function setView(nv) {
     view = nv === 'hm' ? 'hm' : 'fp';
     for (const q of $('tabs').children) q.classList.toggle('on', q.dataset.v === view);
-    $('fp').style.display = view === 'fp' ? '' : 'none'; $('hm').style.display = view === 'hm' ? '' : 'none';
-    $('conW').style.display = view === 'hm' ? '' : 'none'; dirty = true;
+    $('fp').style.display = view === 'fp' ? '' : 'none'; $('hm').style.display = view === 'hm' ? '' : 'none'; dirty = true;
   }
   $('tabs').onclick = e => { const b = e.target.closest('button'); if (b) setView(b.dataset.v); };
   window.addEventListener('message', e => { if (e.data && e.data.np === 'view') setView(e.data.v); });
-  $('aud').onclick = () => { const p = $('audP'); $('trkP').style.display = 'none'; p.style.display = p.style.display === 'block' ? 'none' : 'block'; showAudit(); };
+  const pops = ['audP', 'trkP', 'indP'];
+  function toggle(id, fn) { for (const p of pops) if (p !== id) $(p).style.display = 'none'; const p = $(id); p.style.display = p.style.display === 'block' ? 'none' : 'block'; if (fn) fn(); }
+  $('aud').onclick = () => toggle('audP', showAudit);
+
+  /* ---------- panel de indicadores ---------- */
+  const INDS = [['GRÁFICO'], ['vwap', 'VWAP del día', 'anclado a las 00:00 UTC'], ['bands', 'Bandas del VWAP', '1 y 2 desviaciones'], ['ema1', 'Media exponencial A', '', 'e1'], ['ema2', 'Media exponencial B', '', 'e2'], ['day', 'Niveles de ayer', 'máximo, mínimo, cierre y apertura de hoy'], ['prof', 'Perfil de volumen', 'POC, VAH y VAL de los ticks cargados'],
+    ['ORDER FLOW'], ['imb', 'Desbalances', 'números resaltados'], ['zones', 'Zonas de desbalance apilado', 'se extienden hasta que el precio las cruza'], ['poc', 'POC de cada barra'], ['big', 'Trades grandes', 'órdenes agresoras de gran tamaño'], ['heat', 'Liquidez detrás de las velas', 'el libro en el tiempo, como fondo'], ['stats', 'Estadística de clusters', 'tabla por barra debajo del gráfico']];
+  function showInd() {
+    $('indP').innerHTML = '<h4>Indicadores</h4>' + INDS.map(r => r.length === 1 ? `<h5>${r[0]}</h5>` :
+      `<label><input type="checkbox" data-k="${r[0]}"${cfg.ind[r[0]] ? ' checked' : ''}><span>${r[1]}${r[2] ? `<br><small>${r[2]}</small>` : ''}</span>${r[3] ? `<input type="number" min="2" max="500" data-n="${r[3]}" value="${cfg[r[3]]}">` : ''}</label>`).join('') +
+      `<h5>FILTROS</h5><label><span>Trade grande: mínimo<br><small>en múltiplos de ${fv(sym.big)} (el tamaño base de este mercado)</small></span><input type="number" min="1" step="1" data-n="bigX" value="${cfg.bigX}"></label>` +
+      `<label><span>Marcar niveles con volumen mayor o igual a<br><small>0 = apagado · trade grande aquí = ${fv(sym.big)}</small></span><input type="number" min="0" step="any" data-n="srch" value="${cfg.srch}"></label>`;
+  }
+  $('indB').onclick = () => toggle('indP', showInd);
+  $('indP').oninput = e => {
+    const t = e.target; if (t.dataset.k) cfg.ind[t.dataset.k] = t.checked ? 1 : 0; else if (t.dataset.n) cfg[t.dataset.n] = Math.max(0, +t.value || 0);
+    if (cfg.e1 < 2) cfg.e1 = 2; if (cfg.e2 < 2) cfg.e2 = 2; saveCfg(); dirty = true;
+  };
 
   /* ---------- REPLAY: vuelve a pasar los trades guardados, tick por tick ---------- */
   function repAdd(to, quiet) { const r = rep; while (r.i < to) { r.eng.add(r.T[r.i], r.P[r.i], r.Q[r.i], r.S[r.i]); if (!quiet && sim.pos) bracket(r.P[r.i]); r.i++; } }
@@ -472,7 +741,7 @@
       if (r.i >= r.n) { r.play = false; $('rpP').textContent = 'Reproducir'; }
       $('rpR').value = Math.round(r.i / r.n * 1000);
     }
-    $('rpT').textContent = ft(r.t, 1) + ' · trade ' + r.i.toLocaleString('es-MX') + ' de ' + r.n.toLocaleString('es-MX');
+    $('rpT').textContent = fd(r.t) + ':' + p2(new Date(r.t).getSeconds()) + ' · trade ' + r.i.toLocaleString('es-MX') + ' de ' + r.n.toLocaleString('es-MX');
   }
   $('rpB').onclick = repStart; $('rpX').onclick = repStop;
   $('rpP').onclick = () => { if (!rep) return; if (!rep.play && rep.i >= rep.n) repSeek(0); rep.play = !rep.play; $('rpP').textContent = rep.play ? 'Pausa' : 'Reproducir'; };
@@ -488,14 +757,14 @@
     if (sim.sl != null && (s > 0 ? p <= sim.sl : p >= sim.sl)) simOrder(-s, q, p, 'stop');
     else if (sim.tp != null && (s > 0 ? p >= sim.tp : p <= sim.tp)) simOrder(-s, q, sim.tp, 'objetivo');
   }
-  function simOrder(side, q, fpx, tag) {
+  function simOrder(side, q, fpx, why) {
     if (!(q > 0) || eng.last == null) return; let px = eng.last;
     if (!rep && feed.bookOk) { const [bb, ba] = feed.best(); px = side > 0 ? ba : bb; } // en vivo: compra al ask, vende al bid
     if (fpx != null) px = fpx;
     let rem = q; const ps = Math.sign(sim.pos);
     if (ps && ps !== side) {
       const c = Math.min(Math.abs(sim.pos), rem), pnl = (px - sim.avg) * sym.tick * c * ps; sim.real += pnl;
-      trk.unshift({ t: Date.now(), sym: sym.id, side: ps, q: c, a: sim.avg * sym.tick, b: px * sym.tick, pnl, rep: !!rep, tag: tag || '' }); trk = trk.slice(0, 200);
+      trk.unshift({ t: Date.now(), sym: sym.id, side: ps, q: c, a: sim.avg * sym.tick, b: px * sym.tick, pnl, rep: !!rep, tag: why || '' }); trk = trk.slice(0, 200);
       if (!DEMO) try { localStorage.setItem(TK, JSON.stringify(trk)); } catch (e) {}
       sim.pos = +(sim.pos + side * c).toFixed(8); rem -= c; if (!sim.pos) sim.avg = 0;
     }
@@ -509,30 +778,34 @@
     const tot = trk.reduce((a, t) => a + t.pnl, 0), w = trk.filter(t => t.pnl > 0).length;
     $('trkP').innerHTML = `<h4>Historial automático</h4><p>Cada operación simulada queda registrada sola. Nada de esto sale al mercado.<br>${trk.length} operaciones · aciertos ${trk.length ? Math.round(w / trk.length * 100) : 0}% · P/L total <b class="${tot >= 0 ? 'u' : 'd'}">${tot >= 0 ? '+' : ''}${tot.toFixed(2)}</b></p>
       <table><tr><th>Hora</th><th>Símbolo</th><th>Lado</th><th>Cant.</th><th>Entrada</th><th>Salida</th><th>P/L</th></tr>` +
-      trk.slice(0, 14).map(t => `<tr><td>${ft(t.t, 1)}${t.rep ? ' R' : ''}</td><td>${t.sym}</td><td class="${t.side > 0 ? 'u' : 'd'}">${t.side > 0 ? 'Largo' : 'Corto'}${t.tag ? ' · ' + t.tag : ''}</td><td>${+t.q.toFixed(4)}</td><td>${+t.a.toFixed(4)}</td><td>${+t.b.toFixed(4)}</td><td class="${t.pnl >= 0 ? 'u' : 'd'}">${t.pnl >= 0 ? '+' : ''}${t.pnl.toFixed(2)}</td></tr>`).join('') + '</table>';
+      trk.slice(0, 14).map(t => `<tr><td>${ft(t.t, 1)}${t.rep ? ' R' : ''}</td><td>${t.sym}</td><td class="${t.side > 0 ? 'u' : 'd'}">${t.side > 0 ? 'Largo' : 'Corto'}${t.tag ? ' · ' + t.tag : ''}</td><td>${+t.q.toFixed(4)}</td><td>${+t.a.toFixed(6)}</td><td>${+t.b.toFixed(6)}</td><td class="${t.pnl >= 0 ? 'u' : 'd'}">${t.pnl >= 0 ? '+' : ''}${t.pnl.toFixed(2)}</td></tr>`).join('') + '</table>';
   }
   $('buy').onclick = () => simOrder(1, +$('simQ').value); $('sell').onclick = () => simOrder(-1, +$('simQ').value);
   $('flat').onclick = () => { if (sim.pos) simOrder(-Math.sign(sim.pos), Math.abs(sim.pos)); };
   $('sSL').onclick = () => { sim.sl = null; dirty = true; }; $('sTP').onclick = () => { sim.tp = null; dirty = true; };
-  $('trkB').onclick = () => { const p = $('trkP'); $('audP').style.display = 'none'; p.style.display = p.style.display === 'block' ? 'none' : 'block'; showTrk(); };
+  $('trkB').onclick = () => toggle('trkP', showTrk);
   $('usr').textContent = ses.name.split(' ')[0] + ' · Salir';
   $('usr').onclick = () => { NPAuth.logout(); location.href = 'index.html'; };
   wire('fp', 'fp'); wire('hm', 'hm');
   window.addEventListener('resize', () => { dirty = true; });
 
+  /* ---------- inicio ---------- */
   (async () => {
     try { await loadSyms(); } catch (e) {}
-    const cfg = loadCfg(), want = QS.get('s') || cfg.sym;
+    const want = QS.get('s') || cfg.sym;
     $('symSel').innerHTML = SY.map(s => `<option>${s.id}</option>`).join('');
     sym = SY.find(s => s.id === want) || SY.find(s => s.id === 'BTCUSDT') || SY[0]; $('symSel').value = sym.id; fillSel();
-    for (const [id, k] of [['barSel', 'bar'], ['imbSel', 'imb'], ['histSel', 'hist']]) if (cfg[k] && [...$(id).options].some(o => o.value === cfg[k])) $(id).value = cfg[k];
-    start(); if (QS.get('v')) setView(QS.get('v'));
+    for (const [id, k] of [['barSel', 'bar'], ['imbSel', 'imb'], ['depSel', 'dep'], ['modeSel', 'mode']]) if ([...$(id).options].some(o => o.value === cfg[k])) $(id).value = cfg[k];
+    if (QS.get('w')) v.barW = Math.max(1, +QS.get('w') || 30);
+    zoomUI(); start(); if (QS.get('v')) setView(QS.get('v'));
   })();
   setInterval(snapHeat, HMS);
   setInterval(slow, 200);
+  setInterval(mergeOlder, 3000);
+  setInterval(refreshHist, 10000);
   setInterval(() => { stat.tps = stat.cnt; stat.cnt = 0; }, 1000);
   setInterval(runAudit, 15000); setTimeout(runAudit, 6000);
   let pt = performance.now();
   (function loop() { const nt = performance.now(); repTick(nt - pt); pt = nt; if (dirty && eng) { dirty = false; try { view === 'fp' ? drawFP() : drawHM(); } catch (e) { console.error(e); } } requestAnimationFrame(loop); })();
-  window.__np = { get eng() { return eng; }, get live() { return live; }, get sim() { return sim; }, get feed() { return feed; }, get audit() { return audit; }, get heat() { return heat; } };
+  window.__np = { get eng() { return eng; }, get live() { return live; }, get sim() { return sim; }, get feed() { return feed; }, get audit() { return audit; }, get heat() { return heat; }, get hist() { return hist; }, get D() { return D; }, G, v, cfg };
 })();

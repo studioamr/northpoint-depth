@@ -41,7 +41,7 @@
         setTimeout(() => this.alive && this.openD(), 1500);
       };
     }
-    emit(d) { this.cb.trade(d.T, this.px(d.p), +d.q, d.m ? 1 : 0, d.E || 0); }
+    emit(d) { if (this.firstId == null) { this.firstId = d.a; this.firstT = d.T; } this.cb.trade(d.T, this.px(d.p), +d.q, d.m ? 1 : 0, d.E || 0); }
 
     /* ---- trades ---- */
     onT(d) {
@@ -75,7 +75,7 @@
           if (reqs > 30) await new Promise(r => setTimeout(r, 600)); // respeta el límite de peticiones del exchange
         }
       } catch (e) { this.cb.status('sin historial (' + e.message + ')'); }
-      if (capped && first) { this.cb.reset(); this.lastId = null; } // demasiado atrás: arrancar limpio en vivo
+      if (capped && first) { this.cb.reset(); this.lastId = null; this.firstId = null; } // demasiado atrás: arrancar limpio en vivo
       this.filling = false; this.ready = true;
       const q = this.q; this.q = [];
       let just = true;
@@ -86,6 +86,24 @@
         if (!this.ap(d)) { this.q = q.slice(i).concat(this.q); this.fill(); return; }
       }
       this.cb.status('en vivo');
+    }
+
+    /* Historia profunda: los ids son consecutivos, así que pedir los 1000 anteriores al más viejo es exacto.
+       Va hacia atrás, una petición por segundo, hasta llegar a untilT. */
+    async deepen(untilT) {
+      if (this.deep) return; this.deep = true; let err = 0;
+      const sleep = ms => new Promise(r => setTimeout(r, ms));
+      while (this.alive && !this.deepStop && this.firstId != null && this.firstT > untilT && this.firstId > 1000) {
+        try {
+          const r = await fetch(REST + `aggTrades?symbol=${this.s.id}&fromId=${this.firstId - 1000}&limit=1000`);
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          const b = (await r.json()).filter(d => d.a < this.firstId);
+          if (!this.alive) return; if (!b.length) break;
+          this.firstId = b[0].a; this.firstT = b[0].T; this.cb.older(b); err = 0;
+        } catch (e) { if (++err > 4) break; await sleep(6000); continue; }
+        await sleep(450);
+      }
+      this.deep = false; this.deepEnd = true;
     }
 
     /* ---- libro ---- */

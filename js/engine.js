@@ -7,7 +7,7 @@
 
   class Engine {
     constructor(o) {
-      this.cap = 800000;
+      this.cap = 3000000;
       this.T = new Float64Array(this.cap);
       this.P = new Int32Array(this.cap);
       this.Q = new Float64Array(this.cap);
@@ -48,11 +48,19 @@
       m.v += qi; m.n++; if (!s) m.b += qi;
       this._ap(t, p, q, s);
     }
+    /* mete trades MÁS VIEJOS al inicio (historia que se va cargando hacia atrás). Después hay que llamar set({}) */
+    prepend(T, P, Q, S, k) {
+      if (this.n + k > this.cap) return false;
+      this.T.copyWithin(k, 0, this.n); this.P.copyWithin(k, 0, this.n); this.Q.copyWithin(k, 0, this.n); this.S.copyWithin(k, 0, this.n);
+      this.T.set(T.subarray(0, k)); this.P.set(P.subarray(0, k)); this.Q.set(Q.subarray(0, k)); this.S.set(S.subarray(0, k));
+      this.n += k; this.firstT = this.T[0]; return true;
+    }
     _closes(b, t, p) {
       const o = this.o;
       if (o.type === 'time') return t >= b.t0 + o.size;
       if (o.type === 'ticks') return b.n >= o.size;
       if (o.type === 'volume') return b.vol >= o.size;
+      if (o.type === 'delta') return Math.abs(b.buy - b.sell) >= o.size;
       return Math.max(b.h, p) - Math.min(b.l, p) > o.size; // range, en ticks
     }
     _ap(t, p, q, s) {
@@ -60,7 +68,7 @@
       let b = this.bars[this.bars.length - 1];
       if (!b || this._closes(b, t, p)) {
         b = { t0: o.type === 'time' ? Math.floor(t / o.size) * o.size : t, t1: t, o: p, h: p, l: p, c: p,
-              vol: 0, buy: 0, sell: 0, n: 0, lv: new Map(), cvd: this.cvd, st: null };
+              vol: 0, buy: 0, sell: 0, n: 0, dmax: 0, dmin: 0, lv: new Map(), cvd: this.cvd, st: null };
         this.bars.push(b);
       }
       b.t1 = t; b.c = p; if (p > b.h) b.h = p; if (p < b.l) b.l = p;
@@ -68,6 +76,7 @@
       let e = b.lv.get(k); if (!e) { e = [0, 0]; b.lv.set(k, e); } // [bid, ask]
       if (s) { b.sell += q; e[0] += q; this.cvd -= q; } else { b.buy += q; e[1] += q; this.cvd += q; }
       b.cvd = this.cvd;
+      const dd = b.buy - b.sell; if (dd > b.dmax) b.dmax = dd; if (dd < b.dmin) b.dmin = dd; // extremos del delta dentro de la barra
       let pe = this.prof.get(k); if (!pe) { pe = [0, 0]; this.prof.set(k, pe); }
       pe[s ? 0 : 1] += q;
       const tv = pe[0] + pe[1]; if (tv > this.pmax) { this.pmax = tv; this.ppoc = k; }
@@ -109,13 +118,14 @@
       }
       for (const [k, v] of imb) if (v === 0) imb.delete(k);
       /* apilados: 3 o más seguidos del mismo lado */
+      const zones = []; // [precio abajo, precio arriba, lado]
       for (let k = kl; k <= kh; k += g) {
         const s = imb.get(k); if (!s) continue;
         let j = k; while (Math.sign(imb.get(j + g) || 0) === Math.sign(s)) j += g;
-        if ((j - k) / g + 1 >= 3) for (let x = k; x <= j; x += g) imb.set(x, 2 * Math.sign(s));
+        if ((j - k) / g + 1 >= 3) { for (let x = k; x <= j; x += g) imb.set(x, 2 * Math.sign(s)); zones.push([k, j, Math.sign(s)]); }
         k = j;
       }
-      return (b.st = { poc, mx, mxs, val, vah, imb });
+      return (b.st = { poc, mx, mxs, val, vah, imb, zones });
     }
     profStats() {
       if (!this.prof.size) return null;
