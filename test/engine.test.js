@@ -56,4 +56,14 @@ T('auditoría por minuto en enteros', () => {
   const m = e.mins.get(1.2e12);
   assert.strictEqual(m.v, 300 * 1000); assert.strictEqual(m.b, 200 * 1000);
 });
+T('el motor crece sin perder datos y mete historia al inicio', () => {
+  const e = new Engine({ type: 'time', size: 60000, group: 1 });
+  for (let i = 0; i < 300000; i++) e.add(1e12 + i * 10, 100 + (i % 7), 1, i % 2);
+  assert.ok(e.cap >= 300000); assert.strictEqual(e.n, 300000);
+  const k = 50000, T = new Float64Array(k), P = new Int32Array(k), Q = new Float64Array(k), S = new Uint8Array(k);
+  for (let i = 0; i < k; i++) { T[i] = 9e11 + i; P[i] = 90; Q[i] = 2; }
+  assert.ok(e.prepend(T, P, Q, S, k)); e.set({});
+  assert.strictEqual(e.n, 350000); assert.strictEqual(e.T[0], 9e11); assert.strictEqual(e.T[k], 1e12);
+  assert.strictEqual(e.bars.reduce((a, b) => a + b.vol, 0), 300000 + 2 * k);
+});
 console.log(ok + ' pruebas pasaron');

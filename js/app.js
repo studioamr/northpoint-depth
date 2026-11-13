@@ -28,6 +28,8 @@
   const ETF = { QQQ: 'Nasdaq 100', SPY: 'S&P 500', DIA: 'Dow Jones', IWM: 'Russell 2000', EWY: 'Corea', EWJ: 'Japón', SOXL: 'Semiconductores x3', TQQQ: 'Nasdaq 100 x3', SQQQ: 'Nasdaq 100 inverso x3', GLD: 'Oro (ETF)', SLV: 'Plata (ETF)', TLT: 'Bonos 20 años', EEM: 'Emergentes', FXI: 'China', ARKK: 'ARK Innovation', XLE: 'Energía', XLF: 'Financiero', SMH: 'Semiconductores' };
   const MAT = { XAU: 'Oro', XAG: 'Plata', XPT: 'Platino', XPD: 'Paladio', CL: 'Petróleo WTI', BZ: 'Petróleo Brent', NATGAS: 'Gas natural', COPPER: 'Cobre' };
   async function loadSyms() {
+    /* la lista se guarda 10 min en esta pestaña: los gráficos de la cuadrícula no la vuelven a pedir (ticker/24hr pesa 40 en el límite de Binance) */
+    try { const c = JSON.parse(sessionStorage.getItem('npd.sy')); if (c && Date.now() - c.t < 600000 && c.sy.length) { SY = c.sy; return; } } catch (e) {}
     const [ei, tk] = await Promise.all(['exchangeInfo', 'ticker/24hr'].map(p => fetch(REST + p).then(r => r.json())));
     const T = new Map(tk.map(t => [t.symbol, t])), out = [];
     for (const s of ei.symbols) {
@@ -44,6 +46,7 @@
     out.sort((a, b) => b.qv - a.qv);
     const by = (c, n) => out.filter(s => s.cat === c).slice(0, n);
     if (out.length) SY = [...by('Cripto', 60), ...by('Índices y ETF', 20), ...by('Materias primas', 20), ...by('Acciones', 50)];
+    try { sessionStorage.setItem('npd.sy', JSON.stringify({ t: Date.now(), sy: SY })); } catch (e) {}
   }
 
   /* ---------- ajustes guardados por usuario ---------- */
@@ -130,6 +133,7 @@
   /* historia tick a tick que va llegando hacia atrás: se mete al motor por tandas */
   function mergeOlder() {
     if (!pend.length || !live) return;
+    if (!feed) { pend = []; return; } // se cambió a varios gráficos: la historia pendiente ya no aplica
     const bs = pend.reverse(); pend = []; let k = 0; for (const b of bs) k += b.length;
     const T = new Float64Array(k), P = new Int32Array(k), Q = new Float64Array(k), S = new Uint8Array(k); let i = 0;
     for (const b of bs) for (const d of b) { T[i] = d.T; P[i] = feed.px(d.p); Q[i] = +d.q; S[i] = d.m ? 1 : 0; i++; }
@@ -776,7 +780,7 @@
   }
   function simOrder(side, q, fpx, why) {
     if (!(q > 0) || eng.last == null) return; let px = eng.last;
-    if (!rep && feed.bookOk) { const [bb, ba] = feed.best(); px = side > 0 ? ba : bb; } // en vivo: compra al ask, vende al bid
+    if (!rep && feed && feed.bookOk) { const [bb, ba] = feed.best(); px = side > 0 ? ba : bb; } // en vivo: compra al ask, vende al bid
     if (fpx != null) px = fpx;
     let rem = q; const ps = Math.sign(sim.pos);
     if (ps && ps !== side) {
@@ -954,8 +958,17 @@
   window.addEventListener('message', e => { const m = e.data; if (m && m.np === 'pane' && e.origin === location.origin && LAY.panes[m.i]) { LAY.panes[m.i] = { s: String(m.s), bar: String(m.bar) }; laySave(); } });
   function tellParent() { if (PANE) try { parent.postMessage({ np: 'pane', i: +QS.get('i') || 0, s: sym.id, bar: $('barSel').value }, location.origin); } catch (e) {} }
 
+  /* ---------- aviso si el exchange no responde desde esta red ---------- */
+  async function reach() {
+    let code = 0; try { code = (await fetch(REST + 'ping')).status; } catch (e) { code = -1; }
+    if (code === 200) return true;
+    const b = document.createElement('div'); b.style.cssText = 'position:fixed;left:50%;top:70px;transform:translateX(-50%);z-index:60;max-width:560px;background:#0a1528;border:1px solid #3d5afe;border-radius:12px;padding:14px 18px;font:13px/1.5 Inter,sans-serif;color:#eef5ff;box-shadow:0 14px 40px rgba(0,0,0,.6)';
+    b.innerHTML = '<b style="display:block;margin-bottom:4px">No hay conexión con el mercado</b>' + (code === 451 || code === 403 ? 'Binance Futures no está disponible desde tu país o red (por ejemplo, desde EE. UU.). Prueba otra conexión.' : 'Revisa tu internet. La plataforma reintenta sola.');
+    document.body.appendChild(b); return false;
+  }
   /* ---------- inicio ---------- */
   (async () => {
+    if (!PANE) reach();
     try { await loadSyms(); } catch (e) {}
     const want = QS.get('s') || cfg.sym;
     { let h = '', cat = null; for (const s of SY) { if (s.cat !== cat) { h += (cat === null ? '' : '</optgroup>') + `<optgroup label="${s.cat || 'Mercados'}">`; cat = s.cat; } h += `<option value="${s.id}">${s.id}${s.name ? ' · ' + s.name : ''}</option>`; } $('symSel').innerHTML = h + '</optgroup>'; }
@@ -966,11 +979,11 @@
     zoomUI(); tplUI(); $('licT').textContent = (NPLic.info() || {}).plan || '';
     if (!PANE && LAY.n > 1) setLayout(LAY.n); else start();
     if (QS.get('v')) setView(QS.get('v'));
-    if (!PANE) { infoFast(); infoSlow(); setInterval(infoFast, 5000); setInterval(infoSlow, 20000); setInterval(() => { $('clock').textContent = new Date().toLocaleTimeString('es-MX') + ' · UTC ' + new Date().toISOString().slice(11, 16); }, 1000); }
+    if (!PANE) { infoFast(); infoSlow(); setInterval(infoFast, 5000); setInterval(infoSlow, 60000); setInterval(() => { $('clock').textContent = new Date().toLocaleTimeString('es-MX') + ' · UTC ' + new Date().toISOString().slice(11, 16); }, 1000); }
   })();
   setInterval(snapHeat, HMS);
   setInterval(slow, 200);
-  setInterval(mergeOlder, 3000);
+  setInterval(mergeOlder, 8000);
   setInterval(refreshHist, 10000);
   setInterval(() => { stat.tps = stat.cnt; stat.cnt = 0; }, 1000);
   setInterval(runAudit, 15000); setTimeout(runAudit, 6000);

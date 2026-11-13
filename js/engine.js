@@ -7,7 +7,7 @@
 
   class Engine {
     constructor(o) {
-      this.cap = 3000000;
+      this.max = 3000000; this.cap = 1 << 17; // crece al doble según llegan trades, hasta 3 millones
       this.T = new Float64Array(this.cap);
       this.P = new Int32Array(this.cap);
       this.Q = new Float64Array(this.cap);
@@ -30,6 +30,7 @@
 
     /* t ms · p ticks enteros · q cantidad · s 1 = agresor VENDE (pega al bid), 0 = agresor COMPRA */
     add(t, p, q, s) {
+      if (this.n === this.cap && this.cap < this.max) this.grow(this.cap * 2);
       if (this.n === this.cap) {
         const h = this.cap >> 1;
         this.T.copyWithin(0, h); this.P.copyWithin(0, h); this.Q.copyWithin(0, h); this.S.copyWithin(0, h);
@@ -49,7 +50,14 @@
       this._ap(t, p, q, s);
     }
     /* mete trades MÁS VIEJOS al inicio (historia que se va cargando hacia atrás). Después hay que llamar set({}) */
+    grow(c) {
+      c = Math.min(this.max, c); if (c <= this.cap) return;
+      const t = new Float64Array(c), p = new Int32Array(c), q = new Float64Array(c), s = new Uint8Array(c);
+      t.set(this.T.subarray(0, this.n)); p.set(this.P.subarray(0, this.n)); q.set(this.Q.subarray(0, this.n)); s.set(this.S.subarray(0, this.n));
+      this.T = t; this.P = p; this.Q = q; this.S = s; this.cap = c;
+    }
     prepend(T, P, Q, S, k) {
+      if (this.n + k > this.cap) { let c = this.cap; while (c < this.n + k && c < this.max) c *= 2; this.grow(c); }
       if (this.n + k > this.cap) return false;
       this.T.copyWithin(k, 0, this.n); this.P.copyWithin(k, 0, this.n); this.Q.copyWithin(k, 0, this.n); this.S.copyWithin(k, 0, this.n);
       this.T.set(T.subarray(0, k)); this.P.set(P.subarray(0, k)); this.Q.set(Q.subarray(0, k)); this.S.set(S.subarray(0, k));

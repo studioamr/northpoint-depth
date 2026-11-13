@@ -97,12 +97,13 @@
       while (this.alive && !this.deepStop && this.firstId != null && this.firstT > untilT && this.firstId > 1000) {
         try {
           const r = await fetch(REST + `aggTrades?symbol=${this.s.id}&fromId=${this.firstId - 1000}&limit=1000`);
+          if (r.status === 429 || r.status === 418) { await sleep(Math.max(30, +(r.headers.get('Retry-After') || 60)) * 1000); continue; } // exceso de peticiones: espera lo que pide Binance
           if (!r.ok) throw new Error('HTTP ' + r.status);
           const b = (await r.json()).filter(d => d.a < this.firstId);
           if (!this.alive) return; if (!b.length) break;
           this.firstId = b[0].a; this.firstT = b[0].T; this.cb.older(b); err = 0;
         } catch (e) { if (++err > 4) break; await sleep(6000); continue; }
-        await sleep(450);
+        await sleep(1000);
       }
       this.deep = false; this.deepEnd = true;
     }

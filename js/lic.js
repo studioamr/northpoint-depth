@@ -17,7 +17,7 @@
   function hwid() { let h = get('npd.hwid', null); if (!h) { h = Array.from(crypto.getRandomValues(new Uint8Array(12))).map(x => x.toString(16).padStart(2, '0')).join(''); put('npd.hwid', h); } return h; }
 
   function state() {
-    if (get('npd.lic.fund', false)) return { t: 'libre' };
+    if (C.fundadores.includes(get('npd.lic.fund', ''))) return { t: 'libre' };
     const L = get('npd.lic', null);
     if (!L || !L.key) return { t: 'sin', msg: 'Activa NORTHPOINT DEPTH con tu clave de licencia.' };
     if (L.status !== 'active') return { t: 'vencida', msg: 'Tu suscripción no está activa.' };
@@ -30,7 +30,7 @@
   }
   async function activate(key) {
     key = (key || '').trim(); if (!key) throw new Error('Pega tu clave de licencia.');
-    if (C.fundadores.includes(await sha('npd:' + key.toUpperCase()))) { put('npd.lic.fund', true); return; }
+    const h = await sha('npd:' + key.toUpperCase()); if (C.fundadores.includes(h)) { put('npd.lic.fund', h); return; }
     let j; try { j = await ask(key); } catch (e) { throw new Error('No hay conexión con el servidor de licencias. Intenta de nuevo.'); }
     if (!j.ok) throw new Error(j.error || 'Esa clave no es válida.');
     if (!C.plan.test(j.plan || '')) throw new Error('Esa clave es de otro producto de NORTHPOINT (' + (j.plan || 'sin nombre') + ').');
