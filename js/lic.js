@@ -6,7 +6,7 @@
   const C = {
     server: 'https://northpoint-licencias.andremacouzetruiz.workers.dev',
     plan: /depth/i,                 // el producto de Whop debe llevar "DEPTH" en el nombre
-    comprar: 'index.html#precio',
+    comprar: 'https://northpointcapital.io/depth/#precio',
     gracia: 7 * 864e5,              // sin internet: hasta 7 días con la última validación
     cada: 12 * 36e5,                // se vuelve a validar cada 12 h
     fundadores: ['97123888cb0614d7fb24b8c0222a50f7d8d05c9ddfb1eb4ad2b7bf86ffe6c612', '03468f245b92e08fc98abb04cf4877ba2d7b65ceb783648e97e2deaec9bc2167', 'fc409374ce774c9f1af3fcc3464112811a3f39a9931b005992d5c9a4077a2ae0']
