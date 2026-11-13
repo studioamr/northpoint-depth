@@ -22,9 +22,10 @@
     /* Binance separa los canales: /market = trades, /public = libro */
     open() { this.openT(); this.openD(); }
     openT() {
-      const ws = this.wt = new WebSocket(`wss://fstream.binance.com/market/stream?streams=${this.s.id.toLowerCase()}@aggTrade`);
+      const ws = this.wt = new WebSocket(`wss://fstream.binance.com/market/stream?streams=${this.s.id.toLowerCase()}@aggTrade/${this.s.id.toLowerCase()}@forceOrder`);
       ws.onopen = () => { this.cb.status('sincronizando'); this.fill(); };
-      ws.onmessage = e => { const d = JSON.parse(e.data).data; if (d && d.e === 'aggTrade') { this.lastMsg = Date.now(); this.onT(d); } };
+      ws.onmessage = e => { const d = JSON.parse(e.data).data; if (!d) return; if (d.e === 'aggTrade') { this.lastMsg = Date.now(); this.onT(d); }
+        else if (d.e === 'forceOrder' && d.o && this.cb.liq) this.cb.liq({ t: d.o.T, p: this.px(d.o.ap || d.o.p), q: +d.o.q, s: d.o.S === 'SELL' ? 1 : 0 }); }; // liquidación: posición cerrada a la fuerza
       ws.onclose = () => {
         if (!this.alive) return;
         this.cb.status('reconectando'); this.ready = false;

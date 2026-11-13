@@ -129,7 +129,7 @@ footer{border-top:1px solid var(--line);padding:56px 0 46px;font:400 14px var(--
 </style>
 </head>
 <body>
-<div class="bar"><b>Suscripción abierta.</b> Order flow tick a tick para cripto <a href="#precio">Ver planes →</a></div>
+<div class="bar"><b>Suscripción abierta.</b> Order flow tick a tick: cripto, índices, oro y acciones <a href="#precio">Ver planes →</a></div>
 <div class="navw"><div class="w"><nav>
   <a class="logo" href="#"><i></i>NORTHPOINT<span>DEPTH</span></a>
   <div class="lk"><a href="#funciones">Funciones</a><a href="#herramientas">Herramientas</a><a href="#liquidez">Liquidez</a><a href="#precio">Planes</a><a href="#preguntas">Preguntas</a></div>
@@ -142,7 +142,7 @@ footer{border-top:1px solid var(--line);padding:56px 0 46px;font:400 14px var(--
   <p class="sub">Tus gráficos de rayos X para ver quién compra, quién vende y dónde está la liquidez</p>
   <a class="btn" href="#precio">Accede ahora <svg viewBox="0 0 24 24"><path d="M7 17L17 7M9 7h8v8"/></svg></a>
   <div class="stats">
-    <div><b>+60</b><span>Mercados cripto</span></div>
+    <div><b>+120</b><span>Mercados</span></div>
     <div><b>+12</b><span>Indicadores</span></div>
     <div><b>+15</b><span>Tipos de barra</span></div>
     <div><b>0.5s</b><span>Foto del libro</span></div>
@@ -223,10 +223,10 @@ footer{border-top:1px solid var(--line);padding:56px 0 46px;font:400 14px var(--
 <section id="preguntas" style="padding-top:20px"><div class="w">
   <h2 class="rv">Preguntas frecuentes</h2>
   <div class="faq rv" style="margin-top:26px">
-    <details><summary>¿Cómo me suscribo?</summary><p>Elige un plan, crea tu cuenta y entra a la plataforma.</p></details><details><summary>¿Qué diferencia hay entre los planes?</summary><p>Ninguna en funciones. Los tres incluyen todo; el trimestral y el anual salen más baratos por mes.</p></details>
+    <details><summary>¿Cómo me suscribo?</summary><p>Elige un plan y paga. Recibes una clave de licencia: crea tu cuenta, pega la clave y entras a la plataforma.</p></details><details><summary>¿Qué diferencia hay entre los planes?</summary><p>Ninguna en funciones. Los tres incluyen todo; el trimestral y el anual salen más baratos por mes.</p></details>
     <details><summary>¿En qué equipos funciona?</summary><p>En Mac con chip Apple (M1 en adelante) con la app de escritorio, y en cualquier computadora desde el navegador. El instalador para Windows está en desarrollo.</p></details>
-    <details><summary>¿Qué mercados trae?</summary><p>Los 60 contratos perpetuos en USDT con más volumen de Binance Futures: BTC, ETH, SOL y el resto.</p></details>
-    <details><summary>¿Sirve para futuros como NQ o ES?</summary><p>Todavía no. Hoy es solo cripto.</p></details>
+    <details><summary>¿Qué mercados trae?</summary><p>Contratos perpetuos de Binance Futures: las 60 criptos con más volumen, índices como Nasdaq 100 (QQQ) y S&amp;P 500 (SPY), oro, plata, petróleo y acciones como NVDA, TSLA o AAPL.</p></details>
+    <details><summary>¿Trae el NQ, el ES o forex?</summary><p>Trae el Nasdaq 100 y el S&amp;P 500 como contratos perpetuos (QQQ y SPY), con order flow real. No son los futuros de CME ni un CFD, así que su precio no es idéntico. Forex todavía no.</p></details>
     <details><summary>¿Puedo operar con dinero real desde la plataforma?</summary><p>No. La terminal es simulada: sirve para practicar y medir tu ejecución, pero no envía órdenes al mercado.</p></details>
     <details><summary>¿Incluye señales o recomendaciones?</summary><p>No. Es una herramienta de análisis: te muestra los datos, la decisión es tuya.</p></details>
   </div>
@@ -245,18 +245,19 @@ footer{border-top:1px solid var(--line);padding:56px 0 46px;font:400 14px var(--
 <script>
 /* ====== PLANES (cámbialos aquí) ======
    mes = lo que sale por mes · cada = cómo se cobra · los tres incluyen lo mismo.
-   stripe = el Payment Link de ese plan (https://buy.stripe.com/...). Vacío = el botón lleva a crear cuenta, sin cobrar. */
+   pago = el enlace de compra de ese plan en Whop (https://whop.com/...). Vacío = el botón lleva a crear cuenta.
+   Al pagar, Whop entrega la clave de licencia que se pega al entrar a la plataforma. */
 const PLANES = [
-  { id: 'mensual', nombre: 'MENSUAL', mes: 29, cada: 'Se cobra cada mes', stripe: '' },
-  { id: 'anual', nombre: 'ANUAL', mes: 19, cada: 'Se cobran $228 al año', ahorro: 'Ahorras 34%', hot: 1, stripe: '' },
-  { id: 'trimestral', nombre: 'TRIMESTRAL', mes: 25, cada: 'Se cobran $75 cada 3 meses', ahorro: 'Ahorras 14%', stripe: '' }
+  { id: 'mensual', nombre: 'MENSUAL', mes: 29, cada: 'Se cobra cada mes', pago: '' },
+  { id: 'anual', nombre: 'ANUAL', mes: 19, cada: 'Se cobran $228 al año', ahorro: 'Ahorras 34%', hot: 1, pago: '' },
+  { id: 'trimestral', nombre: 'TRIMESTRAL', mes: 25, cada: 'Se cobran $75 cada 3 meses', ahorro: 'Ahorras 14%', pago: '' }
 ];
-const INCLUYE = ['Los 60 mercados cripto con más volumen', 'Clusters, trades grandes y liquidez', 'Replay, terminal simulada e historial', 'App para Mac y versión de navegador'];
+const INCLUYE = ['Cripto, índices, materias primas y acciones', 'Clusters, trades grandes y liquidez', 'Replay, terminal simulada e historial', 'App para Mac y versión de navegador'];
 const $ = id => document.getElementById(id);
 $('plans').innerHTML = PLANES.map(p => `<div class="plan${p.hot ? ' hot' : ''}">${p.hot ? '<span class="tg">Más elegido</span>' : ''}<small>${p.nombre}</small>
   <div class="price">$${p.mes}<span>USD al mes</span></div><div class="bill">${p.cada}${p.ahorro ? ' · <b>' + p.ahorro + '</b>' : ''}</div>
   <ul>${INCLUYE.map(t => '<li>' + t + '</li>').join('')}</ul>
-  <a class="btn${p.hot ? '' : ' o'}" href="${/^https:\/\/buy\.stripe\.com\//.test(p.stripe || '') ? p.stripe : 'login.html?plan=' + p.id + '#registro'}">Elegir ${p.nombre.toLowerCase()} <svg viewBox="0 0 24 24"><path d="M7 17L17 7M9 7h8v8"/></svg></a></div>`).join('');
+  <a class="btn${p.hot ? '' : ' o'}" href="${/^https:\/\/(whop\.com|buy\.stripe\.com)\//.test(p.pago || '') ? p.pago : 'login.html?plan=' + p.id + '#registro'}">Elegir ${p.nombre.toLowerCase()} <svg viewBox="0 0 24 24"><path d="M7 17L17 7M9 7h8v8"/></svg></a></div>`).join('');
 
 /* ---------- ilustraciones dibujadas (datos de ejemplo, no el mercado real) ---------- */
 const UP = '#22d64a', DN = '#7a4dff', OR = '#ff9a2e', MONO = '"JetBrains Mono",ui-monospace,monospace';

@@ -10,26 +10,31 @@
 *{box-sizing:border-box}
 html,body{height:100%;margin:0;background:var(--bg);color:var(--tx);font:13px var(--sans);overflow:hidden}
 body{background:radial-gradient(900px 500px at 70% -10%,rgba(122,162,255,.07),transparent 60%),var(--bg);display:flex;flex-direction:column}
-.top{display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.top{display:flex;align-items:center;gap:7px;padding:7px 10px;border-bottom:1px solid var(--line);flex-wrap:wrap}
 .logo{font-weight:700;letter-spacing:.14em;font-size:12px;margin-right:4px;white-space:nowrap;color:inherit;text-decoration:none}.logo b{color:var(--ac);font-weight:700}
-select,button,input[type=number]{font:12px var(--sans);color:var(--tx);background:var(--card);border:1px solid var(--line);border-radius:9px;padding:6px 8px;outline:0}
+select,button,input[type=number],input[type=text]{font:12px var(--sans);color:var(--tx);background:var(--card);border:1px solid var(--line);border-radius:9px;padding:6px 8px;outline:0}
 select,button{cursor:pointer}
 select:hover,button:hover{border-color:rgba(255,255,255,.18)}
-option{background:#0c1016}
+option,optgroup{background:#0c1016}
 .seg{display:flex;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:2px}
 .seg button{border:0;background:none;border-radius:8px;padding:5px 10px;color:var(--mut)}
 .seg button.on{background:rgba(122,162,255,.16);color:var(--tx)}
+.seg svg{width:14px;height:14px;display:block;fill:none;stroke:currentColor;stroke-width:1.6}
 .sp{flex:1}
-.chip{font:11px var(--mono);color:var(--mut);border:1px solid var(--line);border-radius:99px;padding:5px 10px;white-space:nowrap;background:var(--card)}
+.chip{font:11px var(--mono);color:var(--mut);border:1px solid var(--line);border-radius:99px;padding:4px 10px;white-space:nowrap;background:var(--card)}
 .chip i{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--mut);margin-right:6px;vertical-align:1px}
 .chip.ok i{background:var(--up)}.chip.bad i{background:var(--dn)}.chip.ok{color:var(--tx)}
 #aud{cursor:pointer}
+/* franja de datos del mercado */
+.info{display:flex;gap:22px;align-items:center;padding:6px 12px;border-bottom:1px solid var(--line);font:11px var(--mono);color:var(--mut);white-space:nowrap;overflow:hidden;min-height:30px}
+.info div{display:flex;flex-direction:column;gap:1px}.info b{color:var(--tx);font-weight:500;font-size:12px}.info small{font-size:9px;letter-spacing:.1em}
+.info .big b{font-size:15px;font-weight:600}
 .main{flex:1;display:flex;min-height:0}
 .tools{width:40px;border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 0}
 .tools button{width:30px;height:30px;padding:0;display:grid;place-items:center;border-color:transparent;background:none;border-radius:8px}
 .tools button:hover{background:var(--card)}
 .tools button.on{background:rgba(122,162,255,.18);border-color:rgba(122,162,255,.4)}
-.tools svg{width:16px;height:16px;stroke:var(--tx);fill:none;stroke-width:1.6;stroke-linecap:round}
+.tools svg{width:16px;height:16px;stroke:var(--tx);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
 .tools hr{width:20px;border:0;border-top:1px solid var(--line);margin:4px 0}
 .left{flex:1;min-width:0;display:flex;flex-direction:column}
 .read{font:11px var(--mono);color:var(--mut);padding:5px 12px;height:24px;white-space:nowrap;overflow:hidden}
@@ -37,72 +42,113 @@ option{background:#0c1016}
 .cv{flex:1;position:relative;min-height:0}
 .cv canvas{position:absolute;inset:0;width:100%;height:100%;cursor:crosshair}
 .right{width:300px;border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.rt{display:flex;border-bottom:1px solid var(--line)}
+.rt button{flex:1;border:0;border-radius:0;background:none;color:var(--mut);padding:9px 0;font-size:11px;letter-spacing:.08em;border-bottom:2px solid transparent}
+.rt button.on{color:var(--tx);border-bottom-color:var(--ac)}
+.pn{flex:1;display:flex;flex-direction:column;min-height:0}.pn[hidden]{display:none}
 .h{font-size:10px;letter-spacing:.14em;color:var(--mut);padding:8px 12px 6px;display:flex;justify-content:space-between;align-items:center}
 .h select{padding:2px 6px;font-size:11px}
 #domW{flex:1;position:relative;min-height:0}#domW canvas{position:absolute;inset:0;width:100%;height:100%}
-#tape{height:170px;overflow:hidden;border-top:1px solid var(--line);font:11px var(--mono)}
+#spd{display:block;width:100%;height:44px}
+#tape{height:150px;overflow:hidden;font:11px var(--mono)}
 #tape .r{display:grid;grid-template-columns:74px 1fr 70px;padding:2px 12px}
 #tape .r span:last-child{text-align:right}
 .u{color:var(--up)}.d{color:var(--dn)}
+.list{flex:1;overflow:auto;font:12px var(--mono)}
+.list h6{margin:0;padding:9px 12px 4px;font:600 10px var(--sans);letter-spacing:.14em;color:var(--mut);position:sticky;top:0;background:#070a0e}
+.wr{display:grid;grid-template-columns:1fr auto 62px;gap:8px;padding:5px 12px;cursor:pointer;align-items:center}
+.wr:hover{background:var(--card)}.wr.on{background:rgba(122,162,255,.12)}
+.wr span:nth-child(2){color:var(--mut)}.wr span:last-child{text-align:right}
+.wr small{display:block;color:var(--mut);font:10px var(--sans)}
+.al{padding:10px 12px;font:12px var(--sans);overflow:auto}
+.al label{display:flex;gap:9px;align-items:center;padding:4px 0;cursor:pointer}.al input{accent-color:#7aa2ff}
+.al h6{margin:14px 0 6px;font:600 10px var(--sans);letter-spacing:.14em;color:var(--mut)}
+.al .it{display:flex;justify-content:space-between;align-items:center;padding:5px 0;font:12px var(--mono);border-bottom:1px solid var(--line)}
+.al .it button{padding:1px 7px;font-size:11px}.al p{color:var(--mut);margin:4px 0;line-height:1.45}
 .pop{position:absolute;right:12px;top:52px;z-index:5;background:#0b0f15;border:1px solid var(--line);border-radius:14px;padding:14px;width:440px;font:11px var(--mono);display:none;box-shadow:0 20px 60px rgba(0,0,0,.6);max-height:80vh;overflow:auto}
 .pop h4{margin:0 0 4px;font:600 13px var(--sans)}.pop p{margin:0 0 10px;color:var(--mut);font:12px/1.45 var(--sans)}
 .pop table{width:100%;border-collapse:collapse}.pop td,.pop th{text-align:right;padding:3px 4px;font-weight:400}.pop th{color:var(--mut)}
 .pop td:first-child,.pop th:first-child{text-align:left}
-#indP{width:330px;font:12px var(--sans)}
+#indP,#helpP{width:340px;font:12px var(--sans)}
 #indP label{display:flex;align-items:center;gap:9px;padding:5px 0;cursor:pointer}
 #indP label span{flex:1}#indP small{color:var(--mut)}
 #indP input[type=checkbox]{accent-color:#7aa2ff;width:15px;height:15px}
 #indP input[type=number]{width:74px;padding:3px 6px;font:11px var(--mono)}
 #indP h5{margin:10px 0 2px;font:600 10px var(--sans);letter-spacing:.14em;color:var(--mut)}
+#helpP kbd{font:11px var(--mono);background:var(--card);border:1px solid var(--line);border-radius:5px;padding:1px 6px;margin-right:8px;min-width:22px;display:inline-block;text-align:center}
+#helpP div{padding:4px 0}
 .ctl{display:flex;align-items:center;gap:6px;color:var(--mut);font-size:11px}
-input[type=range]{width:80px;accent-color:#7aa2ff}
+input[type=range]{width:70px;accent-color:#7aa2ff}
 .rp{display:flex;align-items:center;gap:10px;padding:6px 12px;border-bottom:1px solid var(--line);background:rgba(122,162,255,.06);font:11px var(--mono);color:var(--mut)}
 .rp input[type=range]{flex:1;width:auto}.rp b{color:var(--ac);letter-spacing:.14em;font-weight:600}
 .term{padding:0 12px 10px}.term .row{display:grid;grid-template-columns:64px 1fr 1fr 58px;gap:6px}
-.term input{width:100%;font:12px var(--mono);color:var(--tx);background:var(--card);border:1px solid var(--line);border-radius:9px;padding:6px;outline:0}
+.term input{width:100%;font:12px var(--mono);padding:6px}
 .term .b{background:rgba(61,220,151,.14);border-color:rgba(61,220,151,.35);color:var(--up);font-weight:600}
 .term .s{background:rgba(255,92,112,.14);border-color:rgba(255,92,112,.35);color:var(--dn);font-weight:600}
 .kp{display:grid;grid-template-columns:1fr 1fr;gap:6px 10px;margin-top:9px;font:11px var(--mono)}
 .kp div{display:flex;justify-content:space-between}.kp span{color:var(--mut)}.kp b{font-weight:500}
 .mini{padding:2px 8px;font-size:10px;letter-spacing:0}
-body.demo #usr,body.demo #depSel,body.demo #rpB,body.demo .termW,body.demo #grpSel,body.demo #imbSel{display:none}
+.foot{display:flex;align-items:center;gap:8px;padding:5px 10px;border-top:1px solid var(--line);font:11px var(--mono);color:var(--mut)}
+#toast{position:fixed;right:16px;bottom:44px;z-index:40;display:flex;flex-direction:column;gap:8px}
+#toast div{background:#10161f;border:1px solid rgba(255,209,102,.5);border-radius:12px;padding:11px 14px;min-width:240px;box-shadow:0 14px 40px rgba(0,0,0,.6);font:12px var(--sans)}
+#toast b{display:block;color:#ffd166;margin-bottom:2px}
+#ask{position:fixed;inset:0;z-index:50;display:none;place-items:center;background:rgba(0,0,0,.55)}
+#ask form{background:#0b0f15;border:1px solid var(--line);border-radius:14px;padding:18px;width:320px;display:grid;gap:10px}
+#ask b{font:600 14px var(--sans)}#ask input{padding:10px;font-size:14px}#ask div{display:flex;gap:8px;justify-content:flex-end}
+/* varios gráficos */
+#grid{display:none;flex:1;gap:1px;background:var(--line);min-width:0}
+#grid iframe{border:0;width:100%;height:100%;background:var(--bg)}
+#grid.g2{grid-template-columns:1fr 1fr}#grid.g4{grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}
+body.multi #grid{display:grid}
+body.multi .left,body.multi .right,body.multi .tools,body.multi .info,body.multi .one{display:none}
+/* gráfico dentro de la cuadrícula: solo lo esencial */
+body.pane .logo,body.pane .right,body.pane .tools,body.pane .info,body.pane .foot,body.pane .nopane{display:none}
+body.pane .top{padding:5px 8px}
 @media(max-width:900px){.right{display:none}}
 </style>
 </head>
 <body>
 <div class="top">
   <a class="logo" href="index.html">NORTHPOINT <b>DEPTH</b></a>
-  <select id="symSel" title="Mercado"></select>
-  <select id="barSel" title="Tipo de barra">
+  <select id="symSel" class="one" title="Mercado"></select>
+  <select id="barSel" class="one" title="Tipo de barra">
     <optgroup label="Tiempo"><option value="time:5000">5 s</option><option value="time:15000">15 s</option><option value="time:30000">30 s</option><option value="time:60000" selected>1 min</option><option value="time:180000">3 min</option><option value="time:300000">5 min</option><option value="time:900000">15 min</option><option value="time:1800000">30 min</option><option value="time:3600000">1 h</option><option value="time:14400000">4 h</option></optgroup>
     <optgroup label="Order flow"><option value="ticks:500">500 ticks</option><option value="ticks:2000">2000 ticks</option><option value="volume:V">Volumen</option><option value="delta:D">Delta</option><option value="range:R">Rango</option></optgroup>
   </select>
-  <select id="modeSel" title="Qué muestra cada cluster"><option value="ba">Bid x Ask</option><option value="delta">Delta</option><option value="vol">Volumen</option><option value="prof">Perfil bid/ask</option></select>
-  <select id="grpSel" title="Agrupar precio"></select>
-  <select id="imbSel" title="Desbalance"><option value="2">Desbal. 200%</option><option value="3" selected>Desbal. 300%</option><option value="4">Desbal. 400%</option></select>
-  <div class="seg" id="zoom" title="Nivel de detalle"><button data-w="7">Velas</button><button data-w="30">Clusters</button><button data-w="96">Números</button></div>
-  <div class="seg" id="tabs"><button data-v="fp" class="on">Gráfico</button><button data-v="hm">Heatmap</button></div>
-  <label class="ctl" id="conW">Liquidez <input id="con" type="range" min="0.3" max="3" step="0.05" value="1"></label>
-  <button id="indB">Indicadores</button>
-  <button id="fol">Seguir</button>
-  <button id="rpB">Replay</button>
-  <select id="depSel" title="Cuánta historia tick a tick se carga"><option value="0.5">Ticks 30 min</option><option value="2" selected>Ticks 2 h</option><option value="6">Ticks 6 h</option></select>
+  <select id="modeSel" class="one" title="Qué muestra cada cluster"><option value="ba">Bid x Ask</option><option value="delta">Delta</option><option value="vol">Volumen</option><option value="prof">Perfil bid/ask</option></select>
+  <select id="grpSel" class="one nopane" title="Agrupar precio"></select>
+  <select id="imbSel" class="one nopane" title="Desbalance"><option value="2">Desbal. 200%</option><option value="3" selected>Desbal. 300%</option><option value="4">Desbal. 400%</option></select>
+  <div class="seg one" id="zoom" title="Nivel de detalle (teclas 1, 2, 3)"><button data-w="7">Velas</button><button data-w="30">Clusters</button><button data-w="96">Números</button></div>
+  <div class="seg one nopane" id="tabs"><button data-v="fp" class="on">Gráfico</button><button data-v="hm">Heatmap</button></div>
+  <label class="ctl one nopane" id="conW">Liquidez <input id="con" type="range" min="0.3" max="3" step="0.05" value="1"></label>
+  <button id="indB" class="one nopane">Indicadores</button>
+  <button id="fol" class="one nopane" title="Volver a seguir el precio (F)">Seguir</button>
+  <button id="rpB" class="one nopane">Replay</button>
+  <select id="depSel" class="one nopane" title="Cuánta historia tick a tick se carga"><option value="0.5">Ticks 30 min</option><option value="2" selected>Ticks 2 h</option><option value="6">Ticks 6 h</option></select>
+  <select id="tplSel" class="one nopane" title="Plantillas del gráfico"></select>
+  <button id="shot" class="one nopane" title="Guardar imagen del gráfico">Captura</button>
+  <div class="seg nopane" id="lay" title="Cuántos gráficos a la vez">
+    <button data-n="1" class="on"><svg viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10" rx="1"/></svg></button>
+    <button data-n="2"><svg viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10" rx="1"/><path d="M8 3v10"/></svg></button>
+    <button data-n="4"><svg viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10" rx="1"/><path d="M8 3v10M2 8h12"/></svg></button>
+  </div>
   <div class="sp"></div>
-  <div class="chip" id="aud"><i></i>Auditoría…</div>
-  <div class="chip" id="st"><i></i>conectando</div>
-  <button id="usr" title="Cerrar sesión"></button>
+  <button id="helpB" class="nopane" title="Atajos de teclado">?</button>
+  <button id="usr" class="nopane" title="Cerrar sesión"></button>
 </div>
+<div class="info" id="info"></div>
 <div class="rp" id="rp" style="display:none"><b>REPLAY</b><button id="rpP">Pausa</button>
   <select id="rpS"><option value="1">1x</option><option value="5">5x</option><option value="20" selected>20x</option><option value="60">60x</option><option value="300">300x</option></select>
   <input id="rpR" type="range" min="0" max="1000" value="0"><span id="rpT"></span><button id="rpX">Volver a en vivo</button></div>
-<div id="audP" class="pop"></div><div id="trkP" class="pop"></div><div id="indP" class="pop"></div>
+<div id="audP" class="pop"></div><div id="trkP" class="pop"></div><div id="indP" class="pop"></div><div id="helpP" class="pop"></div>
 <div class="main">
   <div class="tools" id="tools">
     <button data-t="cur" class="on" title="Cursor (Esc)"><svg viewBox="0 0 24 24"><path d="M5 3l14 8-6 2-2 6z"/></svg></button>
-    <button data-t="h" title="Línea horizontal"><svg viewBox="0 0 24 24"><path d="M3 12h18"/><circle cx="12" cy="12" r="2"/></svg></button>
-    <button data-t="line" title="Línea de tendencia (arrastra)"><svg viewBox="0 0 24 24"><path d="M4 19L20 5"/><circle cx="4" cy="19" r="1.6"/><circle cx="20" cy="5" r="1.6"/></svg></button>
-    <button data-t="rect" title="Zona / rectángulo (arrastra)"><svg viewBox="0 0 24 24"><rect x="4" y="7" width="16" height="10" rx="1"/></svg></button>
-    <button data-t="ruler" title="Regla: precio, %, barras, volumen y delta (arrastra)"><svg viewBox="0 0 24 24"><path d="M4 16L16 4l4 4L8 20z"/><path d="M8 12l2 2M11 9l2 2M14 6l2 2"/></svg></button>
+    <button data-t="h" title="Línea horizontal (H)"><svg viewBox="0 0 24 24"><path d="M3 12h18"/><circle cx="12" cy="12" r="2"/></svg></button>
+    <button data-t="line" title="Línea de tendencia (T)"><svg viewBox="0 0 24 24"><path d="M4 19L20 5"/><circle cx="4" cy="19" r="1.6"/><circle cx="20" cy="5" r="1.6"/></svg></button>
+    <button data-t="rect" title="Zona / rectángulo (R)"><svg viewBox="0 0 24 24"><rect x="4" y="7" width="16" height="10" rx="1"/></svg></button>
+    <button data-t="ruler" title="Regla: precio, %, barras, volumen y delta (M)"><svg viewBox="0 0 24 24"><path d="M4 16L16 4l4 4L8 20z"/><path d="M8 12l2 2M11 9l2 2M14 6l2 2"/></svg></button>
+    <button data-t="alert" title="Alerta de precio (A)"><svg viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 21h4"/></svg></button>
     <hr>
     <button id="delAll" title="Borrar todos los dibujos"><svg viewBox="0 0 24 24"><path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"/></svg></button>
   </div>
@@ -111,16 +157,33 @@ body.demo #usr,body.demo #depSel,body.demo #rpB,body.demo .termW,body.demo #grpS
     <div class="cv"><canvas id="fp"></canvas><canvas id="hm" style="display:none"></canvas></div>
   </div>
   <div class="right">
-    <div class="termW"><div class="h"><span>TERMINAL · SIMULADO</span><button id="trkB" class="mini">Historial</button></div>
-    <div class="term"><div class="row"><input id="simQ" type="number" step="any" min="0"><button id="buy" class="b">COMPRAR</button><button id="sell" class="s">VENDER</button><button id="flat">Cerrar</button></div>
-      <div class="kp"><div><span>Posición</span><b id="sPos">0</b></div><div><span>Entrada</span><b id="sAvg">-</b></div><div><span>P/L abierto</span><b id="sOpen">0.00</b></div><div><span>P/L realizado</span><b id="sReal">0.00</b></div><div><span>Stop</span><b id="sSL" class="d" style="cursor:pointer" title="Clic para quitarlo">-</b></div><div><span>Objetivo</span><b id="sTP" class="u" style="cursor:pointer" title="Clic para quitarlo">-</b></div></div></div></div>
-    <div class="h" style="border-top:1px solid var(--line)"><span>LIBRO DE ÓRDENES</span><span id="spr"></span></div>
-    <div id="domW"><canvas id="dom"></canvas></div>
-    <div class="h" style="border-top:1px solid var(--line)"><span>CINTA</span><select id="tapeMin"></select></div>
-    <div id="tape"></div>
+    <div class="rt" id="rtabs"><button data-p="pBook" class="on">LIBRO</button><button data-p="pWatch">MERCADOS</button><button data-p="pAl">ALERTAS</button></div>
+    <div class="pn" id="pBook">
+      <div class="termW"><div class="h"><span>TERMINAL · SIMULADO</span><button id="trkB" class="mini">Historial</button></div>
+      <div class="term"><div class="row"><input id="simQ" type="number" step="any" min="0"><button id="buy" class="b">COMPRAR</button><button id="sell" class="s">VENDER</button><button id="flat">Cerrar</button></div>
+        <div class="kp"><div><span>Posición</span><b id="sPos">0</b></div><div><span>Entrada</span><b id="sAvg">-</b></div><div><span>P/L abierto</span><b id="sOpen">0.00</b></div><div><span>P/L realizado</span><b id="sReal">0.00</b></div><div><span>Stop</span><b id="sSL" class="d" style="cursor:pointer" title="Clic para quitarlo">-</b></div><div><span>Objetivo</span><b id="sTP" class="u" style="cursor:pointer" title="Clic para quitarlo">-</b></div></div></div></div>
+      <div class="h" style="border-top:1px solid var(--line)"><span>LIBRO DE ÓRDENES</span><span id="spr"></span></div>
+      <div id="domW"><canvas id="dom"></canvas></div>
+      <div class="h" style="border-top:1px solid var(--line)"><span>VELOCIDAD · 60 s</span><span id="spdT"></span></div>
+      <canvas id="spd"></canvas>
+      <div class="h" style="border-top:1px solid var(--line)"><span>CINTA</span><select id="tapeMin"></select></div>
+      <div id="tape"></div>
+    </div>
+    <div class="pn" id="pWatch" hidden><div class="list" id="watch"></div></div>
+    <div class="pn" id="pAl" hidden><div class="al" id="alBox"></div></div>
   </div>
+  <div id="grid"></div>
 </div>
+<div class="foot">
+  <div class="chip" id="st"><i></i>conectando</div>
+  <div class="chip" id="aud"><i></i>Auditoría…</div>
+  <div class="sp"></div>
+  <span id="licT"></span><span id="clock"></span>
+</div>
+<div id="toast"></div>
+<div id="ask"><form><b id="askT"></b><input id="askI" type="text" maxlength="40" autocomplete="off"><div><button type="button" id="askN">Cancelar</button><button id="askY" style="background:var(--ac);color:#05070a;border-color:var(--ac)">Aceptar</button></div></form></div>
 <script src="js/auth.js"></script>
+<script src="js/lic.js"></script>
 <script src="js/engine.js"></script>
 <script src="js/feed-binance.js"></script>
 <script src="js/app.js"></script>
